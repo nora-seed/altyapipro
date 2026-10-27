@@ -89,18 +89,49 @@
   const formatNumber = (value) =>
     new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 1 }).format(value);
 
-  function parseMeters(value, bareIsKm = false) {
-    const match = cleanText(value).toLocaleLowerCase('tr-TR').replace(',', '.').match(/([\d.]+)\s*(km|m)?/);
-    if (!match) return 0;
-    const amount = Number(match[1]);
+  function parseNumeric(value) {
+    let text = cleanText(value).replace(/\s/g, '').replace(/[^\d.,-]/g, '');
+    if (!text) return NaN;
+    if (text.includes(',') && text.includes('.')) {
+      text = text.replace(/\./g, '').replace(',', '.');
+    } else if (text.includes(',')) {
+      text = text.replace(',', '.');
+    } else if (/^\d{1,3}(\.\d{3})+$/.test(text)) {
+      text = text.replace(/\./g, '');
+    }
+    const amount = Number(text);
+    return Number.isFinite(amount) ? amount : NaN;
+  }
+
+  function parseMeters(value, defaultUnit = 'm') {
+    const text = cleanText(value).toLocaleLowerCase('tr-TR');
+    const unit = (text.match(/(km|m)\s*$/) || [])[1];
+    const amount = parseNumeric(text.replace(/(km|m)\s*$/, ''));
     if (!Number.isFinite(amount)) return 0;
-    if (match[2] === 'km') return amount * 1000;
-    if (match[2] === 'm') return amount;
-    return bareIsKm && amount <= 100 ? amount * 1000 : amount;
+    if (unit === 'km') return amount * 1000;
+    if (unit === 'm') return amount;
+    return defaultUnit === 'km' ? amount * 1000 : amount;
+  }
+
+  function normalizeLengthText(value, fallback = '0 km') {
+    const text = cleanText(value);
+    if (!text) return fallback;
+    if (/(km|m)$/i.test(text)) return text;
+    const amount = decimal(text, NaN);
+    return Number.isFinite(amount) ? `${formatNumber(amount)} km` : text;
   }
 
   function formatMeters(meters) {
     return meters >= 1000 ? `${formatNumber(meters / 1000)} km` : `${formatNumber(meters)} m`;
+  }
+
+  const volumeFormatter = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 2 });
+  function formatVolume(value) {
+    return volumeFormatter.format(value);
+  }
+
+  function roundVolume(value) {
+    return Math.round(value * 100) / 100;
   }
 
   function projectWorkMeters(projectId) {
@@ -112,7 +143,7 @@
   function applyAutoProgress() {
     let changed = false;
     state.projects = state.projects.map((project) => {
-      const totalMeters = parseMeters(project.total, true);
+      const totalMeters = parseMeters(project.total, 'km');
       const workedMeters = projectWorkMeters(project.id);
       if (totalMeters <= 0 || workedMeters <= 0) return project;
 
@@ -153,8 +184,8 @@
       status,
       statusLabel: info.label,
       progress: clamp(num(project.progress), 0, 100),
-      length: cleanText(project.length) || '0 km',
-      total: cleanText(project.total) || '0 km',
+      length: normalizeLengthText(project.length, '0 km'),
+      total: normalizeLengthText(project.total, '0 km'),
       personnel: Math.max(0, num(project.personnel)),
       days: Math.max(0, num(project.days)),
       thumb: project.thumb || THUMBS[type] || 'assets/city.svg',
@@ -173,6 +204,14 @@
     const statusInfoValue = recordStatusInfo(status);
     const created = new Date(record.createdAt);
     const createdAt = Number.isNaN(created.getTime()) ? new Date().toISOString() : created.toISOString();
+    const width = Math.max(0, decimal(record.width, 0));
+    const depth = Math.max(0, decimal(record.depth, 0));
+    const length = Math.max(0, decimal(record.length, 0));
+    const bucket = Math.max(0, decimal(record.bucket, 0));
+    const volume = roundVolume(
+      Math.max(0, decimal(record.volume, 0) || width * depth * length)
+    );
+    const bucketCount = bucket > 0 ? roundVolume(volume / bucket) : 0;
 
     return {
       id: String(record.id || `record-${Date.now()}-${index}`),
@@ -183,6 +222,13 @@
       team: cleanText(record.team),
       people: Math.max(0, num(record.people, 0)),
       meters: Math.max(0, decimal(record.meters, 0)),
+      width,
+      depth,
+      length,
+      volume,
+      bucket,
+      bucketCount,
+      machine: cleanText(record.machine),
       status,
       statusLabel: statusInfoValue.label,
       statusClass: statusInfoValue.className,
@@ -321,6 +367,9 @@
     const length = list
       .filter((record) => record.type === 'work')
       .reduce((total, record) => total + record.meters, 0);
+    const excavationVolume = list
+      .filter((record) => record.type === 'dig')
+      .reduce((total, record) => total + record.volume, 0);
     const excavations = list.filter((record) => record.type === 'dig').length;
     const teams = new Map();
 
@@ -333,6 +382,7 @@
     return {
       length,
       excavations,
+      excavationVolume,
       teams: teams.size,
       personnel: Array.from(teams.values()).reduce((total, value) => total + value, 0)
     };
@@ -597,6 +647,7 @@
               ${icon('i-chevron', 'chev')}
             </span>
             <span class="recent-addr">${esc(record.location)}</span>
+            ${record.type === 'dig' ? `<span class="recent-volume">${formatVolume(record.volume)} m³ kazı</span>` : ''}
             <span class="badge ${esc(record.statusClass)}">${esc(record.statusLabel)}</span>
           </span>
         </button>`
@@ -787,8 +838,8 @@
 
     setText('#statLength', formatNumber(today.length));
     setText('#statLengthPrev', `Dün: ${formatNumber(yesterday.length)} m`);
-    setText('#statExcavations', today.excavations);
-    setText('#statExcavationsPrev', `Dün: ${yesterday.excavations} adet`);
+    setText('#statExcavations', formatVolume(today.excavationVolume));
+    setText('#statExcavationsPrev', `Dün: ${formatVolume(yesterday.excavationVolume)} m³`);
     setText('#statTeams', today.teams);
     setText(
       '#statPersonnel',
@@ -976,6 +1027,7 @@
                     <span class="detail-record-main">
                       <strong>${esc(record.title)}</strong>
                       <small>${esc(record.location)}${record.team ? ` · ${esc(record.team)}` : ''}</small>
+                      ${record.type === 'dig' ? `<small class="detail-volume">${formatVolume(record.volume)} m³ · ${formatVolume(record.width)} × ${formatVolume(record.depth)} × ${formatVolume(record.length)} m${record.bucket ? ` · ${formatNumber(record.bucketCount)} kova` : ''}</small>` : ''}
                     </span>
                     <time>${esc(formatRecordTime(record))}</time>
                   </div>`
@@ -1180,6 +1232,49 @@
     if (!selectedId && state.projects[0]) select.value = state.projects[0].id;
   }
 
+  function populateTeamOptions(selected = '') {
+    const select = $('#recordTeamSelect');
+    if (!select) return;
+
+    const teams = Array.from(
+      new Set(state.records.map((record) => record.team).filter(Boolean))
+    ).sort((a, b) => a.localeCompare(b, 'tr'));
+
+    select.innerHTML = [
+      '<option value="">Manuel ekip gir</option>',
+      ...teams.map((team) => `<option value="${esc(team)}">${esc(team)}</option>`)
+    ].join('');
+    select.value = teams.includes(selected) ? selected : '';
+  }
+
+  function updateDigPreview() {
+    const preview = $('#recordVolumePreview');
+    const bucketInfo = $('#recordBucketCount');
+    if (!preview) return;
+
+    const width = Math.max(0, decimal($('#recordWidth')?.value, 0));
+    const depth = Math.max(0, decimal($('#recordDepth')?.value, 0));
+    const length = Math.max(0, decimal($('#recordLength')?.value, 0));
+    const bucket = Math.max(0, decimal($('#recordBucket')?.value, 0));
+    const volume = roundVolume(width * depth * length);
+    const bucketCount = bucket > 0 ? roundVolume(volume / bucket) : 0;
+
+    preview.textContent = `${formatVolume(volume)} m³`;
+    if (bucketInfo) {
+      bucketInfo.textContent = bucket > 0
+        ? `Yaklaşık ${formatNumber(bucketCount)} kova · kova ${formatVolume(bucket)} m³`
+        : 'Kova kapasitesi girilince kova sayısı hesaplanır.';
+    }
+  }
+
+  function toggleDigFields(type) {
+    const box = $('#recordDigFields');
+    const metersField = $('#recordMetersField');
+    if (box) box.hidden = type !== 'dig';
+    if (metersField) metersField.hidden = type === 'dig';
+    updateDigPreview();
+  }
+
   function setRecordTypeDefaults(type, force = false) {
     const info = recordTypeInfo(type);
     const title = $('#recordTitle');
@@ -1191,6 +1286,9 @@
       title.placeholder = info.defaultTitle;
     }
     state.recordFormType = type;
+    const formTitle = $('#recordFormTitle');
+    if (formTitle) formTitle.textContent = `${info.label} Ekle`;
+    toggleDigFields(type);
   }
 
   function openRecordForm(type = 'work', projectId = null) {
@@ -1216,14 +1314,21 @@
 
     setValue('#recordTitle', info.defaultTitle);
     setValue('#recordLocation', project && project.location !== 'Konum belirtilmedi' ? project.location : '');
+    populateTeamOptions();
     setValue('#recordTeam', '');
     setValue('#recordPeople', '1');
     setValue('#recordMeters', '');
+    setValue('#recordWidth', '');
+    setValue('#recordDepth', '');
+    setValue('#recordLength', '');
+    setValue('#recordBucket', '');
+    setValue('#recordMachine', '');
     setValue('#recordStatus', type === 'photo' ? 'pending' : 'completed');
     setValue('#recordNote', '');
     setValue('#recordPhoto', '');
     state.pendingPhoto = '';
     state.recordFormType = type;
+    toggleDigFields(type);
 
     const preview = $('#recordPhotoPreview');
     const previewImage = $('#recordPhotoImg');
@@ -1293,6 +1398,17 @@
     const info = recordTypeInfo(type);
     const status = RECORD_STATUS[value('#recordStatus')] ? value('#recordStatus') : 'completed';
     const title = value('#recordTitle') || info.defaultTitle;
+    const width = Math.max(0, decimal($('#recordWidth')?.value, 0));
+    const depth = Math.max(0, decimal($('#recordDepth')?.value, 0));
+    const length = Math.max(0, decimal($('#recordLength')?.value, 0));
+    const bucket = Math.max(0, decimal($('#recordBucket')?.value, 0));
+
+    if (type === 'dig' && (width <= 0 || depth <= 0 || length <= 0)) {
+      showRecordFormError('Kazı için kanal genişliği, derinliği ve uzunluğu zorunlu.');
+      return;
+    }
+
+    const volume = type === 'dig' ? roundVolume(width * depth * length) : 0;
 
     const record = normalizeRecord(
       {
@@ -1303,7 +1419,13 @@
         location: value('#recordLocation') || project.location,
         team: value('#recordTeam'),
         people: num($('#recordPeople')?.value, 1),
-        meters: decimal($('#recordMeters')?.value, 0),
+        meters: type === 'dig' ? 0 : decimal($('#recordMeters')?.value, 0),
+        width,
+        depth,
+        length,
+        volume,
+        bucket,
+        machine: value('#recordMachine'),
         status,
         note: value('#recordNote'),
         photo: state.pendingPhoto,
@@ -1333,6 +1455,8 @@
       toast('Kayıt eklendi ancak cihazda yeterli kayıt alanı yok.');
     } else if (photoDropped) {
       toast('Kayıt eklendi; fotoğraf yer kalmadığı için kaydedilmedi.');
+    } else if (type === 'dig') {
+      toast(`Kazı kaydı eklendi: ${formatVolume(record.volume)} m³.`);
     } else {
       toast('Saha kaydı eklendi.');
     }
@@ -1353,6 +1477,8 @@
           <span class="meta">${icon('i-projects')}${esc(project ? project.title : 'Proje silinmiş')}</span>
           <span class="meta">${icon('i-pin')}${esc(record.location)}</span>
           ${record.team ? `<span class="meta">${icon('i-users')}${esc(record.team)}</span>` : ''}
+          ${record.type === 'dig' ? `<span class="meta is-volume">${icon('i-excavator')}${formatVolume(record.volume)} m³ · ${formatVolume(record.width)} × ${formatVolume(record.depth)} × ${formatVolume(record.length)} m${record.bucket ? ` · ${formatNumber(record.bucketCount)} kova` : ''}</span>` : ''}
+          ${record.machine ? `<span class="meta">${icon('i-excavator')}${esc(record.machine)}</span>` : ''}
         </span>
         <span class="record-side">
           <span class="side-top"><time>${esc(formatRecordTime(record))}</time>${icon('i-chevron', 'chev')}</span>
@@ -1696,6 +1822,37 @@
   if (recordType) {
     recordType.addEventListener('change', () => setRecordTypeDefaults(recordType.value));
   }
+
+  const recordTeamSelect = $('#recordTeamSelect');
+  if (recordTeamSelect) {
+    recordTeamSelect.addEventListener('change', () => {
+      const teamInput = $('#recordTeam');
+      if (!teamInput) return;
+      if (recordTeamSelect.value) {
+        teamInput.value = recordTeamSelect.value;
+      } else {
+        teamInput.value = '';
+        teamInput.focus();
+      }
+    });
+  }
+
+  const recordTeamInput = $('#recordTeam');
+  if (recordTeamInput && recordTeamSelect) {
+    recordTeamInput.addEventListener('input', () => {
+      if (recordTeamSelect.value && recordTeamSelect.value !== recordTeamInput.value.trim()) {
+        recordTeamSelect.value = '';
+      }
+    });
+  }
+
+  ['#recordWidth', '#recordDepth', '#recordLength', '#recordBucket'].forEach((selector) => {
+    const input = $(selector);
+    if (input) {
+      input.addEventListener('input', updateDigPreview);
+      input.addEventListener('change', updateDigPreview);
+    }
+  });
 
   const recordProject = $('#recordProject');
   if (recordProject) {

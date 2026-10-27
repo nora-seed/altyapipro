@@ -145,8 +145,8 @@
           <div class="stat-icon tone-amber"><svg aria-hidden="true"><use href="#i-excavator"/></svg></div>
           <div class="stat-copy">
             <span class="stat-label">Açılan Kazı</span>
-            <strong class="stat-value"><span id="statExcavations">0</span> <small>adet</small></strong>
-            <span class="stat-trend up"><svg aria-hidden="true"><use href="#i-arrow-up-right"/></svg><span id="statExcavationsPrev">Dün: 0 adet</span></span>
+            <strong class="stat-value"><span id="statExcavations">0</span> <small>m³</small></strong>
+            <span class="stat-trend up"><svg aria-hidden="true"><use href="#i-arrow-up-right"/></svg><span id="statExcavationsPrev">Dün: 0 m³</span></span>
           </div>
           <div class="spark tone-amber" aria-hidden="true"><i style="height:45%"></i><i style="height:70%"></i><i style="height:58%"></i><i style="height:92%"></i></div>
         </article>
@@ -702,11 +702,12 @@
         </label>
         <label class="field">
           <span>Mevcut hat</span>
-          <input class="field-input" id="projectLength" name="length" type="text" placeholder="0 km" inputmode="decimal">
+          <input class="field-input" id="projectLength" name="length" type="text" placeholder="Örn. 2,5 km" inputmode="decimal">
         </label>
         <label class="field">
           <span>Toplam hat</span>
-          <input class="field-input" id="projectTotal" name="total" type="text" placeholder="0 km" inputmode="decimal">
+          <input class="field-input" id="projectTotal" name="total" type="text" placeholder="Örn. 250 km" inputmode="decimal">
+          <small class="field-hint">Birim yazmazsan km kabul edilir.</small>
         </label>
         <label class="field">
           <span>Personel</span>
@@ -784,17 +785,56 @@
           <input class="field-input" id="recordLocation" name="location" type="text" placeholder="Mahalle, sokak veya adres" autocomplete="off">
         </label>
         <label class="field">
-          <span>Ekip</span>
+          <span>Ekip seç</span>
+          <select class="field-input" id="recordTeamSelect" name="teamSelect">
+            <option value="">Manuel ekip gir</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Ekip adı</span>
           <input class="field-input" id="recordTeam" name="team" type="text" placeholder="1. Saha Ekibi" autocomplete="off">
         </label>
         <label class="field">
           <span>Ekip mevcudu</span>
           <input class="field-input" id="recordPeople" name="people" type="number" min="1" step="1" value="1" inputmode="numeric">
         </label>
-        <label class="field">
+        <label class="field" id="recordMetersField">
           <span>Metre (varsa)</span>
           <input class="field-input" id="recordMeters" name="meters" type="number" min="0" step="0.1" placeholder="0" inputmode="decimal">
         </label>
+        <div class="dig-fields field-full" id="recordDigFields" hidden>
+          <div class="dig-head">
+            <strong>Kazı metrajı</strong>
+            <small>Hacim = genişlik × derinlik × uzunluk</small>
+          </div>
+          <div class="form-grid">
+            <label class="field">
+              <span>Kanal genişliği (m)</span>
+              <input class="field-input" id="recordWidth" name="width" type="number" min="0" step="0.01" placeholder="0" inputmode="decimal">
+            </label>
+            <label class="field">
+              <span>Kanal derinliği (m)</span>
+              <input class="field-input" id="recordDepth" name="depth" type="number" min="0" step="0.01" placeholder="0" inputmode="decimal">
+            </label>
+            <label class="field">
+              <span>Kazı uzunluğu (m)</span>
+              <input class="field-input" id="recordLength" name="length" type="number" min="0" step="0.1" placeholder="0" inputmode="decimal">
+            </label>
+            <label class="field">
+              <span>Kova kapasitesi (m³)</span>
+              <input class="field-input" id="recordBucket" name="bucket" type="number" min="0" step="0.01" placeholder="0,8" inputmode="decimal">
+            </label>
+            <label class="field field-full">
+              <span>Makine / kova bilgisi</span>
+              <input class="field-input" id="recordMachine" name="machine" type="text" placeholder="Örn. Ekskavatör 20t, 0,8 m³ kova" autocomplete="off">
+            </label>
+          </div>
+          <div class="volume-result">
+            <span>Hesaplanan kazı hacmi</span>
+            <strong id="recordVolumePreview">0 m³</strong>
+            <small id="recordBucketCount">Kova kapasitesi girilince kova sayısı hesaplanır.</small>
+          </div>
+        </div>
         <label class="field">
           <span>Fotoğraf (isteğe bağlı)</span>
           <input class="field-file" id="recordPhoto" name="photo" type="file" accept="image/*">

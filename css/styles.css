@@ -342,6 +342,30 @@ svg { display: block; }
 .stat-trend.warn { color: var(--red); }
 .stat-sub { font-size: 9.5px; color: var(--muted); }
 .field-hint { display: block; margin-top: 5px; color: var(--muted); font-size: 9.5px; line-height: 1.35; }
+.dig-fields {
+  padding: 11px;
+  border: 1px solid #d9e8f7;
+  border-radius: 14px;
+  background: #f7fbff;
+}
+.dig-fields[hidden], #recordMetersField[hidden] { display: none; }
+.dig-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 9px; }
+.dig-head strong { font-size: 11px; font-weight: 800; color: #16406b; }
+.dig-head small { font-size: 9px; color: var(--muted); text-align: right; }
+.volume-result {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 10px;
+  align-items: center;
+  margin-top: 9px;
+  padding: 10px 11px;
+  border-radius: 12px;
+  background: #e8f1fe;
+  color: #16406b;
+}
+.volume-result span { font-size: 10px; font-weight: 700; }
+.volume-result strong { font-size: 18px; font-weight: 800; letter-spacing: -0.4px; }
+.volume-result small { grid-column: 1 / -1; font-size: 9px; color: #5c7490; }
 .auto-progress-note { display: block; margin-top: 5px; color: var(--muted-2); font-size: 9.5px; font-weight: 500; }
 .spark {
   position: absolute;
@@ -1018,6 +1042,8 @@ input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; }
   text-overflow: ellipsis;
 }
 .meta svg { width: 11px; height: 11px; flex: none; }
+.meta.is-volume { align-items: flex-start; white-space: normal; line-height: 1.35; }
+.meta.is-volume svg { margin-top: 1px; }
 .record-side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 .side-top { display: flex; align-items: center; gap: 4px; }
 .side-top time { font-size: 9.5px; color: var(--muted); white-space: nowrap; }
@@ -1448,6 +1474,7 @@ body.sheet-open { overflow: hidden; }
 .detail-record-main { flex: 1; min-width: 0; }
 .detail-record-main strong { display: block; font-size: 10.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .detail-record-main small { display: block; margin-top: 1px; font-size: 9px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.detail-record-main small.detail-volume { color: #a26a00; font-weight: 600; white-space: normal; line-height: 1.3; }
 .detail-record time { flex: none; font-size: 9px; color: var(--muted); white-space: nowrap; }
 .detail-empty {
   padding: 20px 12px;
@@ -1464,6 +1491,7 @@ body.sheet-open { overflow: hidden; }
   font-size: 11px;
   color: var(--muted);
 }
+.recent-volume { font-size: 9.5px; font-weight: 700; color: #a26a00; }
 
 .project-form { padding-top: 0; }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
