@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>AltyapıPro</title>
+  <meta name="description" content="AltyapıPro — konum tabanlı, çevrimdışı çalışabilen kurumsal saha platformu.">
+  <meta name="theme-color" content="#F4F8FD">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="AltyapıPro">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<svg class="sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="logoCyan" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5fd8f5"/><stop offset="1" stop-color="#1aa6d9"/>
+    </linearGradient>
+  </defs>
+
+  <symbol id="logo" viewBox="0 0 64 64">
+    <path d="M32 12 56 24 32 36 8 24Z" fill="#1d82b8"/>
+    <path d="M32 21 56 33 32 45 8 33Z" fill="url(#logoCyan)"/>
+    <path d="M32 30 56 42 32 54 8 42Z" fill="#0b3654"/>
+  </symbol>
+
+  <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-projects" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-map" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3 3 5.4V21l6-2.4 6 2.4 6-2.4V3l-6 2.4z"/><path d="M9 3v15.6M15 5.4V21"/></symbol>
+  <symbol id="i-records" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></symbol>
+  <symbol id="i-reports" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></symbol>
+  <symbol id="i-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-wifi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5.5 5.5 0 0 1 7 0M12 19.5h.01"/></symbol>
+  <symbol id="i-droplet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.7s6 6.3 6 10.3a6 6 0 0 1-12 0c0-4 6-10.3 6-10.3z"/></symbol>
+  <symbol id="i-excavator" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17h8v-4h3l3-4h4"/><path d="M9 13V9h4M19 9l2 4h-4"/><circle cx="5.5" cy="19" r="2"/><circle cx="12.5" cy="19" r="2"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="3.4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16.5 3.6a3.4 3.4 0 0 1 0 6.8"/></symbol>
+  <symbol id="i-clipboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2"/><rect x="9" y="2" width="6" height="4" rx="1"/><path d="m9 13 2 2 4-4"/></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="3.6"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="2.6"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5"/></symbol>
+  <symbol id="i-crosshair" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></symbol>
+  <symbol id="i-compass" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></symbol>
+  <symbol id="i-filter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16l-6 7v6l-4 2v-8z"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="17" rx="2.5"/><path d="M8 2.5v4M16 2.5v4M3 9.5h18"/></symbol>
+  <symbol id="i-trend-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 6-6 4 4 8-8"/><path d="M15 7h6v6"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1.4" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.7 2.7L16 9.4"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.5 18a2 2 0 0 0 1.8 3h15.4a2 2 0 0 0 1.8-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-waves" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8c2.5-2 4.5-2 7 0s4.5 2 7 0 4.5-2 6 0"/><path d="M2 13c2.5-2 4.5-2 7 0s4.5 2 7 0 4.5-2 6 0"/><path d="M2 18c2.5-2 4.5-2 7 0s4.5 2 7 0 4.5-2 6 0"/></symbol>
+  <symbol id="i-cloud-rain" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 14a4.5 4.5 0 0 0-1-8.9 6 6 0 0 0-11.4 2A4 4 0 0 0 6 14.5z"/><path d="M8 18l-1 3M12 18l-1 3M16 18l-1 3"/></symbol>
+  <symbol id="i-zap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></symbol>
+  <symbol id="i-radio" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7M5.5 5.5a9 9 0 0 0 0 13M18.5 5.5a9 9 0 0 1 0 13"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></symbol>
+  <symbol id="i-arrow-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
+  <symbol id="i-arrow-up-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></symbol>
+  <symbol id="i-sort" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h12M4 12h9M4 17h6M18 13v7M15 17l3 3 3-3"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></symbol>
+</svg>
+
+<div class="app">
+
+  <header class="app-header">
+    <div class="brand">
+      <svg class="brand-mark" aria-hidden="true"><use href="#logo"/></svg>
+      <div class="brand-copy">
+        <div class="brand-name">Altyapı<span>Pro</span></div>
+        <p class="brand-tag">Daha güçlü altyapılar, daha yaşanabilir şehirler</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn bell" type="button" data-soon aria-label="Bildirimler">
+        <svg><use href="#i-bell"/></svg><span class="notif-dot"></span>
+      </button>
+      <button class="avatar" type="button" data-soon aria-label="Profil">MK</button>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ============ ANA SAYFA ============ -->
+    <section class="screen is-active" id="screen-home" aria-label="Ana Sayfa">
+
+      <article class="hero-card">
+        <img class="hero-thumb" src="assets/city.svg" alt="Merzifon İçme Suyu projesi">
+        <div class="hero-info">
+          <div class="hero-top">
+            <span class="eyebrow">Aktif Proje</span>
+            <svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg>
+          </div>
+          <h2 class="hero-title">Merzifon İçme Suyu</h2>
+          <div class="hero-meta">
+            <span><svg aria-hidden="true"><use href="#i-pin"/></svg>Merzifon, Amasya</span>
+            <span><svg aria-hidden="true"><use href="#i-layers"/></svg>İçme Suyu Hattı</span>
+          </div>
+        </div>
+      </article>
+
+      <div class="sync-bar">
+        <span class="sync-dot" aria-hidden="true"></span>
+        <div class="sync-text">
+          <strong>Veriler senkronize edildi</strong>
+          <small>Son eşitleme: Bugün 09:37</small>
+        </div>
+        <button class="sync-pill" type="button" data-soon>
+          <svg aria-hidden="true"><use href="#i-wifi"/></svg>Çevrim içi
+          <svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg>
+        </button>
+      </div>
+
+      <div class="section-head">
+        <h2>Günlük Özet</h2>
+        <a class="link" href="#reports">Tümünü Gör <svg aria-hidden="true"><use href="#i-chevron"/></svg></a>
+      </div>
+
+      <div class="summary-grid">
+        <article class="stat-card">
+          <div class="stat-icon tone-blue"><svg aria-hidden="true"><use href="#i-droplet"/></svg></div>
+          <div class="stat-copy">
+            <span class="stat-label">Bugün Döşenen Hat</span>
+            <strong class="stat-value">328 <small>m</small></strong>
+            <span class="stat-trend up"><svg aria-hidden="true"><use href="#i-arrow-up-right"/></svg>Dün: 245 m</span>
+          </div>
+          <div class="spark tone-blue" aria-hidden="true"><i style="height:38%"></i><i style="height:62%"></i><i style="height:52%"></i><i style="height:88%"></i></div>
+        </article>
+
+        <article class="stat-card">
+          <div class="stat-icon tone-amber"><svg aria-hidden="true"><use href="#i-excavator"/></svg></div>
+          <div class="stat-copy">
+            <span class="stat-label">Açılan Kazı</span>
+            <strong class="stat-value">12 <small>adet</small></strong>
+            <span class="stat-trend up"><svg aria-hidden="true"><use href="#i-arrow-up-right"/></svg>Dün: 9 adet</span>
+          </div>
+          <div class="spark tone-amber" aria-hidden="true"><i style="height:45%"></i><i style="height:70%"></i><i style="height:58%"></i><i style="height:92%"></i></div>
+        </article>
+
+        <article class="stat-card">
+          <div class="stat-icon tone-green"><svg aria-hidden="true"><use href="#i-users"/></svg></div>
+          <div class="stat-copy">
+            <span class="stat-label">Aktif Ekip</span>
+            <strong class="stat-value">3 <small>ekip</small></strong>
+            <span class="stat-sub">Toplam 14 personel</span>
+          </div>
+          <div class="spark tone-green" aria-hidden="true"><i style="height:55%"></i><i style="height:80%"></i><i style="height:40%"></i><i style="height:68%"></i></div>
+        </article>
+
+        <article class="stat-card">
+          <div class="stat-icon tone-purple"><svg aria-hidden="true"><use href="#i-clipboard"/></svg></div>
+          <div class="stat-copy">
+            <span class="stat-label">Bekleyen Onay</span>
+            <strong class="stat-value">8 <small>kayıt</small></strong>
+            <span class="stat-trend warn">3'ü bugün eklendi</span>
+          </div>
+          <div class="spark tone-purple" aria-hidden="true"><i style="height:34%"></i><i style="height:58%"></i><i style="height:46%"></i><i style="height:76%"></i></div>
+        </article>
+      </div>
+
+      <div class="section-head"><h2>Hızlı İşlemler</h2></div>
+
+      <div class="quick-grid">
+        <button class="quick-btn primary" type="button" data-soon>
+          <span class="quick-icon"><svg aria-hidden="true"><use href="#i-plus"/></svg></span>
+          <strong>Yeni İmalat</strong>
+          <small>Hat, kazı, menfez vb. ekle</small>
+        </button>
+        <button class="quick-btn mint" type="button" data-soon>
+          <span class="quick-icon"><svg aria-hidden="true"><use href="#i-users"/></svg></span>
+          <strong>Abone Bağlantısı</strong>
+          <small>Yeni abone işlemi oluştur</small>
+        </button>
+        <button class="quick-btn sky" type="button" data-go="map">
+          <span class="quick-icon"><svg aria-hidden="true"><use href="#i-pin"/></svg></span>
+          <strong>Harita</strong>
+          <small>Sahadaki verileri görüntüle</small>
+        </button>
+        <button class="quick-btn lilac" type="button" data-soon>
+          <span class="quick-icon"><svg aria-hidden="true"><use href="#i-camera"/></svg></span>
+          <strong>Fotoğraf</strong>
+          <small>Sahadan fotoğraf ekle</small>
+        </button>
+      </div>
+
+      <article class="progress-card">
+        <div class="progress-head">
+          <h3>Proje Tamamlanma Durumu</h3>
+          <span>%62</span>
+        </div>
+        <div class="bar"><i style="width:62%"></i></div>
+        <div class="progress-foot">
+          <div class="progress-stat">
+            <svg aria-hidden="true"><use href="#i-crosshair"/></svg>
+            <div><strong>12,4 km <span>/ 20 km</span></strong><small>Toplam hat uzunluğu</small></div>
+          </div>
+          <div class="progress-stat">
+            <svg aria-hidden="true"><use href="#i-calendar"/></svg>
+            <div><strong>320 gün</strong><small>Kalan süre</small></div>
+          </div>
+          <button class="ghost-btn" type="button" data-go="projects">Detaylar <svg aria-hidden="true"><use href="#i-chevron"/></svg></button>
+        </div>
+      </article>
+
+      <div class="section-head">
+        <h2>Son Kayıtlar</h2>
+        <a class="link" href="#records">Tümünü Gör <svg aria-hidden="true"><use href="#i-chevron"/></svg></a>
+      </div>
+
+      <div class="recent-list">
+        <button class="recent-item" type="button" data-go="records">
+          <span class="record-icon tone-blue"><svg aria-hidden="true"><use href="#i-droplet"/></svg></span>
+          <span class="recent-main">
+            <span class="recent-top"><strong>İçme Suyu Hattı İmalatı</strong><span class="recent-time">Bugün 09:18</span><svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg></span>
+            <span class="recent-addr">Kuzey Mahallesi, 124. Sokak</span>
+            <span class="badge completed">Tamamlandı</span>
+          </span>
+        </button>
+        <button class="recent-item" type="button" data-go="records">
+          <span class="record-icon tone-amber"><svg aria-hidden="true"><use href="#i-excavator"/></svg></span>
+          <span class="recent-main">
+            <span class="recent-top"><strong>Kazı İşlemi</strong><span class="recent-time">Bugün 08:42</span><svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg></span>
+            <span class="recent-addr">Kuzey Mahallesi, 124. Sokak</span>
+            <span class="badge ongoing">Devam Ediyor</span>
+          </span>
+        </button>
+        <button class="recent-item" type="button" data-go="records">
+          <span class="record-icon tone-green"><svg aria-hidden="true"><use href="#i-users"/></svg></span>
+          <span class="recent-main">
+            <span class="recent-top"><strong>Abone Bağlantısı</strong><span class="recent-time">Dün 17:36</span><svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg></span>
+            <span class="recent-addr">A Blok / Daire 3</span>
+            <span class="badge pending">Onay Bekliyor</span>
+          </span>
+        </button>
+      </div>
+
+    </section>
+
+    <!-- ============ PROJELER ============ -->
+    <section class="screen" id="screen-projects" aria-label="Projeler">
+      <div class="page-head">
+        <div>
+          <h1 class="page-title">Projeler</h1>
+        </div>
+        <button class="btn btn-primary" type="button" data-soon>
+          <svg aria-hidden="true"><use href="#i-plus"/></svg>Yeni Proje
+        </button>
+      </div>
+
+      <div class="search-row">
+        <label class="search">
+          <svg aria-hidden="true"><use href="#i-search"/></svg>
+          <input id="projectSearch" type="search" placeholder="Proje adı, lokasyon veya açıklama ile ara..." autocomplete="off">
+        </label>
+      </div>
+
+      <div class="chips scroll-x" id="projectFilters" role="tablist" aria-label="Proje durumu">
+        <button class="chip is-active" type="button" data-status="all" role="tab" aria-selected="true">Tümü</button>
+        <button class="chip" type="button" data-status="ongoing" role="tab" aria-selected="false"><i class="dot green"></i>Devam Eden</button>
+        <button class="chip" type="button" data-status="planned" role="tab" aria-selected="false"><i class="dot blue"></i>Planlanan</button>
+        <button class="chip" type="button" data-status="completed" role="tab" aria-selected="false"><i class="dot sky"></i>Tamamlanan</button>
+        <button class="chip" type="button" data-status="paused" role="tab" aria-selected="false"><i class="dot amber"></i>Duraklatılan</button>
+      </div>
+
+      <div class="filter-row">
+        <label class="select-wrap">
+          <select id="typeFilter" aria-label="Proje türü">
+            <option value="all">Tüm Türler</option>
+            <option>İçme Suyu Hattı</option>
+            <option>Kanalizasyon Hattı</option>
+            <option>Yağmur Suyu Hattı</option>
+            <option>Telekom Altyapısı</option>
+          </select>
+          <svg aria-hidden="true"><use href="#i-chevron-down"/></svg>
+        </label>
+        <label class="select-wrap">
+          <select aria-label="İl">
+            <option>Tüm İller</option>
+            <option>Amasya</option>
+            <option>Tokat</option>
+          </select>
+          <svg aria-hidden="true"><use href="#i-chevron-down"/></svg>
+        </label>
+        <button class="sort-btn" type="button" data-soon>
+          <svg aria-hidden="true"><use href="#i-sort"/></svg>Varsayılan
+          <svg aria-hidden="true"><use href="#i-chevron-down"/></svg>
+        </button>
+      </div>
+
+      <div class="project-list" id="projectList"></div>
+      <div class="empty-state" id="projectEmpty" hidden>
+        <svg aria-hidden="true"><use href="#i-search"/></svg>
+        <strong>Proje bulunamadı</strong>
+        <p>Arama veya filtreleri değiştirerek tekrar deneyin.</p>
+      </div>
+    </section>
+
+    <!-- ============ HARİTA ============ -->
+    <section class="screen" id="screen-map" aria-label="Harita">
+      <div class="map-search-row">
+        <label class="search">
+          <svg aria-hidden="true"><use href="#i-search"/></svg>
+          <input type="search" placeholder="Adres, parsel, tesis veya koordinat ara..." autocomplete="off">
+        </label>
+        <button class="icon-btn filter-btn" type="button" data-soon aria-label="Harita filtreleri">
+          <svg aria-hidden="true"><use href="#i-sliders"/></svg>
+        </button>
+      </div>
+
+      <div class="chips scroll-x map-chips" id="branchFilters" aria-label="Altyapı türü">
+        <button class="chip is-active" type="button" data-branch="water"><i class="dot blue"></i>İçme Suyu</button>
+        <button class="chip" type="button" data-branch="sewer"><i class="dot brown"></i>Kanalizasyon</button>
+        <button class="chip" type="button" data-branch="gas"><i class="dot amber"></i>Doğalgaz</button>
+        <button class="chip" type="button" data-branch="power"><i class="dot red"></i>Elektrik</button>
+        <button class="chip" type="button" data-branch="telecom"><i class="dot purple"></i>Telekom</button>
+      </div>
+
+      <div class="map-wrap">
+        <svg class="map-svg" viewBox="0 0 430 660" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Kuzey Mahallesi saha haritası">
+          <defs>
+            <linearGradient id="mapSky" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#7d8a70"/><stop offset="1" stop-color="#6a765f"/>
+            </linearGradient>
+            <filter id="mapShadow" x="-30%" y="-30%" width="160%" height="160%">
+              <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#0b2a4b" flood-opacity=".35"/>
+            </filter>
+          </defs>
+
+          <rect width="430" height="660" fill="url(#mapSky)"/>
+
+          <path d="M0 0h150c-10 40-40 55-60 90S60 140 0 150Z" fill="#5d7a4f"/>
+          <path d="M250 0h180v70c-40 20-70 10-100 28S280 90 250 70Z" fill="#5c794e"/>
+          <path d="M0 470c60-26 90 14 150 0s110-34 160-6 80 18 120 0v196H0Z" fill="#627e55"/>
+
+          <g fill="#b9b1a1" stroke="#96907f" stroke-width="1">
+            <rect x="72" y="54" width="58" height="42" rx="2"/>
+            <rect x="145" y="42" width="46" height="54" rx="2"/>
+            <rect x="205" y="64" width="58" height="38" rx="2"/>
+            <rect x="282" y="52" width="52" height="46" rx="2"/>
+            <rect x="346" y="70" width="56" height="40" rx="2"/>
+            <rect x="40" y="128" width="60" height="50" rx="2"/>
+            <rect x="118" y="120" width="46" height="44" rx="2"/>
+            <rect x="186" y="132" width="66" height="52" rx="2"/>
+            <rect x="268" y="124" width="54" height="48" rx="2"/>
+            <rect x="338" y="132" width="58" height="50" rx="2"/>
+            <rect x="54" y="210" width="64" height="54" rx="2"/>
+            <rect x="140" y="204" width="50" height="46" rx="2"/>
+            <rect x="208" y="214" width="62" height="52" rx="2"/>
+            <rect x="292" y="206" width="52" height="48" rx="2"/>
+            <rect x="358" y="216" width="58" height="46" rx="2"/>
+            <rect x="36" y="296" width="58" height="50" rx="2"/>
+            <rect x="116" y="290" width="58" height="52" rx="2"/>
+            <rect x="194" y="300" width="58" height="48" rx="2"/>
+            <rect x="272" y="294" width="56" height="50" rx="2"/>
+            <rect x="346" y="302" width="60" height="48" rx="2"/>
+            <rect x="58" y="382" width="66" height="52" rx="2"/>
+            <rect x="146" y="376" width="52" height="48" rx="2"/>
+            <rect x="216" y="386" width="60" height="50" rx="2"/>
+            <rect x="298" y="380" width="54" height="48" rx="2"/>
+            <rect x="368" y="390" width="52" height="46" rx="2"/>
+            <rect x="48" y="464" width="58" height="46" rx="2"/>
+            <rect x="126" y="458" width="52" height="44" rx="2"/>
+            <rect x="196" y="468" width="62" height="46" rx="2"/>
+            <rect x="278" y="462" width="56" height="44" rx="2"/>
+            <rect x="352" y="470" width="58" height="44" rx="2"/>
+            <rect x="60" y="540" width="60" height="48" rx="2"/>
+            <rect x="138" y="534" width="54" height="46" rx="2"/>
+            <rect x="208" y="544" width="58" height="44" rx="2"/>
+            <rect x="290" y="538" width="58" height="46" rx="2"/>
+            <rect x="364" y="546" width="50" height="44" rx="2"/>
+          </g>
+
+          <g stroke="#8c8678" stroke-width="1.2" opacity=".7">
+            <path d="M78 58h46M78 66h46M78 74h46M78 82h46M78 90h30"/>
+            <path d="M150 48h36M150 56h36M150 64h36M150 72h36M150 80h36M150 88h22"/>
+            <path d="M210 68h48M210 76h48M210 84h48M210 92h30"/>
+            <path d="M287 58h42M287 66h42M287 74h42M287 82h42M287 90h26"/>
+            <path d="M46 134h48M46 142h48M46 150h48M46 158h48M46 166h30"/>
+            <path d="M123 126h36M123 134h36M123 142h36M123 150h36M123 158h22"/>
+            <path d="M191 138h56M191 146h56M191 154h56M191 162h56M191 170h34"/>
+            <path d="M60 216h52M60 224h52M60 232h52M60 240h52M60 248h34"/>
+            <path d="M214 220h50M214 228h50M214 236h50M214 244h50M214 252h32"/>
+            <path d="M64 388h54M64 396h54M64 404h54M64 412h54M64 420h34"/>
+            <path d="M222 392h48M222 400h48M222 408h48M222 416h48M222 424h30"/>
+            <path d="M66 546h48M66 554h48M66 562h48M66 570h48M66 578h30"/>
+            <path d="M214 550h46M214 558h46M214 566h46M214 574h46M214 582h28"/>
+          </g>
+
+          <g fill="#54734a" opacity=".95">
+            <circle cx="36" cy="46" r="9"/><circle cx="52" cy="40" r="6"/><circle cx="130" cy="108" r="7"/>
+            <circle cx="172" cy="104" r="5"/><circle cx="258" cy="112" r="8"/><circle cx="326" cy="104" r="6"/>
+            <circle cx="404" cy="122" r="7"/><circle cx="28" cy="192" r="7"/><circle cx="108" cy="188" r="5"/>
+            <circle cx="252" cy="192" r="7"/><circle cx="376" cy="186" r="6"/><circle cx="22" cy="268" r="8"/>
+            <circle cx="106" cy="282" r="5"/><circle cx="238" cy="280" r="6"/><circle cx="382" cy="272" r="7"/>
+            <circle cx="26" cy="362" r="6"/><circle cx="120" cy="356" r="5"/><circle cx="258" cy="362" r="7"/>
+            <circle cx="390" cy="356" r="6"/><circle cx="34" cy="532" r="7"/><circle cx="124" cy="522" r="5"/>
+            <circle cx="274" cy="528" r="6"/><circle cx="394" cy="524" r="7"/><circle cx="188" cy="610" r="7"/>
+            <circle cx="340" cy="614" r="6"/>
+          </g>
+
+          <g fill="none" stroke="#e9e4d9" stroke-linecap="round">
+            <path d="M100 0c-6 90 8 150 10 218s-12 132-4 210 4 150-6 232" stroke-width="26"/>
+            <path d="M232 0c8 88 4 150-4 214s4 140 0 210-6 154 2 236" stroke-width="24"/>
+            <path d="M352 0c-6 92 10 152 6 220s10 138 2 212-8 148 0 228" stroke-width="22"/>
+            <path d="M0 262c70 6 118-6 176 4s126 10 254-2" stroke-width="24"/>
+            <path d="M0 452c84-10 130 8 194 2s128 6 236 0" stroke-width="26"/>
+            <path d="M0 606c76 8 128-6 198 0s142 8 232-4" stroke-width="20"/>
+          </g>
+          <g fill="none" stroke="#d2ccc0" stroke-width="1.5" stroke-dasharray="7 9">
+            <path d="M100 0c-6 90 8 150 10 218s-12 132-4 210 4 150-6 232"/>
+            <path d="M232 0c8 88 4 150-4 214s4 140 0 210-6 154 2 236"/>
+            <path d="M0 262c70 6 118-6 176 4s126 10 254-2"/>
+            <path d="M0 452c84-10 130 8 194 2s128 6 236 0"/>
+          </g>
+
+          <g fill="none" stroke-linecap="round" filter="url(#mapShadow)">
+            <path class="pipe pipe-water" data-branch="water" d="M286 0v214c0 62-36 88-38 150s-30 90-34 158-10 138-8 138" stroke="#2b7ff0" stroke-width="4.5"/>
+            <path class="pipe pipe-sewer" data-branch="sewer" d="M0 180c80 8 120 30 178 30s92-20 250-14" stroke="#a9743f" stroke-width="4.5"/>
+            <path class="pipe pipe-gas" data-branch="gas" d="M0 356c96 12 148-16 230-16s124 18 200 8" stroke="#e8b12c" stroke-width="4.5"/>
+            <path class="pipe pipe-power" data-branch="power" d="M166 0v132c0 74-42 112-42 188s34 132 34 340" stroke="#e6534b" stroke-width="4"/>
+            <path class="pipe pipe-telecom" data-branch="telecom" d="M0 118c90 26 160 70 232 70s120-26 198-60" stroke="#8e5cd9" stroke-width="4"/>
+          </g>
+
+          <g class="pipe-nodes" fill="#fff">
+            <circle cx="286" cy="70" r="3"/><circle cx="286" cy="140" r="3"/><circle cx="272" cy="250" r="3"/>
+            <circle cx="240" cy="330" r="3"/><circle cx="220" cy="410" r="3"/><circle cx="206" cy="500" r="3"/>
+            <circle cx="100" cy="200" r="3"/><circle cx="180" cy="210" r="3"/><circle cx="330" cy="196" r="3"/>
+            <circle cx="70" cy="350" r="3"/><circle cx="250" cy="344" r="3"/><circle cx="370" cy="348" r="3"/>
+            <circle cx="166" cy="80" r="3"/><circle cx="158" cy="250" r="3"/><circle cx="158" cy="430" r="3"/>
+            <circle cx="90" cy="140" r="3"/><circle cx="240" cy="160" r="3"/><circle cx="350" cy="150" r="3"/>
+          </g>
+
+          <g filter="url(#mapShadow)">
+            <g class="map-marker" data-branch="water">
+              <circle cx="286" cy="168" r="12" fill="#2b7ff0" stroke="#fff" stroke-width="2.5"/>
+              <use href="#i-droplet" x="280" y="162" width="12" height="12" style="color:#fff" stroke-width="2.6"/>
+            </g>
+            <g class="map-marker" data-branch="water">
+              <circle cx="252" cy="372" r="12" fill="#2b7ff0" stroke="#fff" stroke-width="2.5"/>
+              <use href="#i-droplet" x="246" y="366" width="12" height="12" style="color:#fff" stroke-width="2.6"/>
+            </g>
+
+            <g class="map-marker" data-branch="sewer">
+              <circle cx="250" cy="208" r="12" fill="#a9743f" stroke="#fff" stroke-width="2.5"/>
+              <use href="#i-waves" x="244" y="202" width="12" height="12" style="color:#fff" stroke-width="2.6"/>
+            </g>
+            <g class="map-marker" data-branch="sewer">
+              <circle cx="368" cy="192" r="12" fill="#a9743f" stroke="#fff" stroke-width="2.5"/>
+              <use href="#i-waves" x="362" y="186" width="12" height="12" style="color:#fff" stroke-width="2.6"/>
+            </g>
+
+            <g class="map-marker" data-branch="gas">
+              <circle cx="196" cy="340" r="12" fill="#e8b12c" stroke="#fff" stroke-width="2.5"/>
+              <use href="#i-alert" x="190" y="334" width="12" height="12" style="color:#fff" stroke-width="2.6"/>
+            </g>
+
+            <g class="map-marker" data-branch="power">
+              <circle cx="158" cy="292" r="12" fill="#e6534b" stroke="#fff" stroke-width="2.5"/>
+              <use href="#i-zap" x="152" y="286" width="12" height="12" style="color:#fff" stroke-width="2.6"/>
+            </g>
+
+            <g class="map-marker" data-branch="telecom">
+              <circle cx="120" cy="170" r="12" fill="#8e5cd9" stroke="#fff" stroke-width="2.5"/>
+              <use href="#i-radio" x="114" y="164" width="12" height="12" style="color:#fff" stroke-width="2.6"/>
+            </g>
+            <g class="map-marker" data-branch="telecom">
+              <circle cx="332" cy="158" r="12" fill="#8e5cd9" stroke="#fff" stroke-width="2.5"/>
+              <use href="#i-radio" x="326" y="152" width="12" height="12" style="color:#fff" stroke-width="2.6"/>
+            </g>
+          </g>
+
+          <path d="M232 296 300 286 330 330 314 382 250 392 222 346Z" fill="#ef4444" fill-opacity=".16" stroke="#ef4444" stroke-width="2" stroke-dasharray="7 6"/>
+          <g filter="url(#mapShadow)">
+            <circle cx="276" cy="338" r="16" fill="#ef4444" stroke="#fff" stroke-width="3"/>
+            <use href="#i-excavator" x="268" y="330" width="16" height="16" style="color:#fff" stroke-width="2.4"/>
+          </g>
+
+          <circle cx="160" cy="462" r="30" fill="#2b7ff0" opacity=".18"/>
+          <circle cx="160" cy="462" r="13" fill="#2b7ff0" opacity=".9" stroke="#fff" stroke-width="4"/>
+
+          <g class="map-labels" font-family="-apple-system, system-ui, sans-serif" font-size="10" font-weight="700" fill="#fff" stroke="#33402f" stroke-width="2.4" paint-order="stroke" stroke-linejoin="round">
+            <text x="74" y="130">Kuzey Mahallesi</text>
+            <text x="112" y="292" transform="rotate(-80 112 292)">123. Sokak</text>
+            <text x="248" y="300" transform="rotate(-86 248 300)">125. Sokak</text>
+            <text x="198" y="452" transform="rotate(-4 198 452)">124. Sokak</text>
+            <text x="26" y="500" transform="rotate(-9 26 500)">Atatürk Caddesi</text>
+          </g>
+
+          <g transform="translate(20,566)">
+            <path d="M0 0h100" stroke="#fff" stroke-width="2" opacity=".8"/>
+            <path d="M0 -4v8M50 -4v8M100 -4v8" stroke="#fff" stroke-width="2" opacity=".8"/>
+            <text x="0" y="18" font-family="system-ui" font-size="9" fill="#fff">0</text>
+            <text x="42" y="18" font-family="system-ui" font-size="9" fill="#fff">50</text>
+            <text x="88" y="18" font-family="system-ui" font-size="9" fill="#fff">100 m</text>
+          </g>
+        </svg>
+
+        <div class="map-tools">
+          <button class="map-tool wide" type="button" data-soon>
+            <svg aria-hidden="true"><use href="#i-layers"/></svg><span>Katmanlar</span>
+          </button>
+          <button class="map-tool" type="button" data-soon aria-label="Konumum">
+            <svg aria-hidden="true"><use href="#i-crosshair"/></svg>
+          </button>
+          <button class="map-tool" type="button" data-soon aria-label="Pusula">
+            <svg aria-hidden="true"><use href="#i-compass"/></svg>
+          </button>
+          <button class="map-tool text" type="button" data-soon aria-label="3B görünüm">3D</button>
+        </div>
+
+        <button class="satellite-chip" type="button" data-soon>
+          <span class="sat-thumb" aria-hidden="true"></span>Uydu
+          <svg aria-hidden="true"><use href="#i-chevron-down"/></svg>
+        </button>
+
+        <div class="map-sheet">
+          <div class="sheet-head">
+            <h2>Yakındaki Varlıklar</h2>
+            <a class="link" href="#records">Tümünü Gör <svg aria-hidden="true"><use href="#i-chevron"/></svg></a>
+          </div>
+          <div class="nearby-grid">
+            <button class="nearby" type="button" data-soon><span class="nearby-icon tone-blue"><svg aria-hidden="true"><use href="#i-droplet"/></svg></span><span><strong>İçme Suyu</strong><small>4 adet</small></span><svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg></button>
+            <button class="nearby" type="button" data-soon><span class="nearby-icon tone-brown"><svg aria-hidden="true"><use href="#i-waves"/></svg></span><span><strong>Kanalizasyon</strong><small>3 adet</small></span><svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg></button>
+            <button class="nearby" type="button" data-soon><span class="nearby-icon tone-amber"><svg aria-hidden="true"><use href="#i-alert"/></svg></span><span><strong>Doğalgaz</strong><small>2 adet</small></span><svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg></button>
+            <button class="nearby" type="button" data-soon><span class="nearby-icon tone-red"><svg aria-hidden="true"><use href="#i-zap"/></svg></span><span><strong>Elektrik</strong><small>1 adet</small></span><svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg></button>
+            <button class="nearby" type="button" data-soon><span class="nearby-icon tone-purple"><svg aria-hidden="true"><use href="#i-radio"/></svg></span><span><strong>Telekom</strong><small>2 adet</small></span><svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg></button>
+          </div>
+
+          <div class="active-work">
+            <span class="work-icon"><svg aria-hidden="true"><use href="#i-excavator"/></svg></span>
+            <div class="work-copy">
+              <span class="eyebrow">Aktif Çalışma</span>
+              <strong>Kazı Çalışması</strong>
+              <span class="work-address"><svg aria-hidden="true"><use href="#i-pin"/></svg>124. Sokak, Kuzey Mahallesi</span>
+              <div class="work-meta">
+                <span><svg aria-hidden="true"><use href="#i-calendar"/></svg>Başlangıç <b>12 Mar 2025</b></span>
+                <span><svg aria-hidden="true"><use href="#i-users"/></svg>Ekip <b>3 personel</b></span>
+                <span class="work-progress"><span>Tamamlanma</span><span class="bar"><i style="width:62%"></i></span><b>%62</b></span>
+              </div>
+            </div>
+            <span class="badge ongoing">Devam Ediyor</span>
+            <svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ KAYITLAR ============ -->
+    <section class="screen" id="screen-records" aria-label="Kayıtlar">
+      <div class="page-head records-head">
+        <div>
+          <h1 class="page-title">Kayıtlar</h1>
+          <p class="page-sub">Saha çalışmalarınızı görüntüleyin ve yönetin.</p>
+        </div>
+        <button class="btn btn-primary" type="button" data-soon>
+          <svg aria-hidden="true"><use href="#i-plus"/></svg>Yeni Kayıt
+        </button>
+      </div>
+
+      <div class="search-filter-row">
+        <label class="search">
+          <svg aria-hidden="true"><use href="#i-search"/></svg>
+          <input id="recordSearch" type="search" placeholder="Kayıt ara (proje, adres, açıklama...)" autocomplete="off">
+        </label>
+        <button class="sort-btn filter-chip" type="button" data-soon>
+          <svg aria-hidden="true"><use href="#i-filter"/></svg>Filtrele
+          <svg aria-hidden="true"><use href="#i-chevron-down"/></svg>
+        </button>
+      </div>
+
+      <div class="chips scroll-x" id="recordFilters" aria-label="Kayıt türü">
+        <button class="chip is-active" type="button" data-type="all">Tümü</button>
+        <button class="chip" type="button" data-type="work">İmalat</button>
+        <button class="chip" type="button" data-type="service">Abone</button>
+        <button class="chip" type="button" data-type="dig">Kazı</button>
+        <button class="chip" type="button" data-type="photo">Fotoğraf</button>
+        <button class="chip" type="button" data-type="other">Diğer</button>
+      </div>
+
+      <div id="recordGroups"></div>
+      <div class="empty-state" id="recordEmpty" hidden>
+        <svg aria-hidden="true"><use href="#i-search"/></svg>
+        <strong>Kayıt bulunamadı</strong>
+        <p>Arama veya filtreleri değiştirerek tekrar deneyin.</p>
+      </div>
+    </section>
+
+    <!-- ============ RAPORLAR ============ -->
+    <section class="screen" id="screen-reports" aria-label="Raporlar">
+      <div class="page-head reports-head">
+        <div>
+          <h1 class="page-title">Raporlar</h1>
+          <p class="page-sub">Projelerinizin performansını analiz edin.</p>
+        </div>
+        <button class="btn btn-outline" type="button" data-soon>
+          <svg aria-hidden="true"><use href="#i-download"/></svg>Rapor Dışa Aktar
+        </button>
+      </div>
+
+      <div class="report-filters">
+        <label class="select-wrap has-lead">
+          <svg class="lead" aria-hidden="true"><use href="#i-calendar"/></svg>
+          <select aria-label="Tarih aralığı">
+            <option>01 Haz 2025 - 30 Haz 2025</option>
+            <option>01 May 2025 - 31 May 2025</option>
+          </select>
+          <svg aria-hidden="true"><use href="#i-chevron-down"/></svg>
+        </label>
+        <label class="select-wrap has-lead">
+          <svg class="lead" aria-hidden="true"><use href="#i-projects"/></svg>
+          <select aria-label="Proje">
+            <option>Tüm Projeler</option>
+            <option>Merzifon İçme Suyu</option>
+            <option>Erbaa Kanalizasyon</option>
+          </select>
+          <svg aria-hidden="true"><use href="#i-chevron-down"/></svg>
+        </label>
+      </div>
+
+      <div class="section-head">
+        <h2>Genel Bakış</h2>
+        <a class="link" href="#reports">Tümünü Gör <svg aria-hidden="true"><use href="#i-chevron"/></svg></a>
+      </div>
+
+      <div class="kpi-grid">
+        <article class="kpi-card">
+          <div class="kpi-donut" style="--p:62"><span>%62</span></div>
+          <div class="kpi-copy">
+            <span>Proje Tamamlanma Oranı</span>
+            <strong>%62</strong>
+            <small class="up"><svg aria-hidden="true"><use href="#i-arrow-up-right"/></svg>+8% <em>Önceki aya göre</em></small>
+          </div>
+          <div class="spark tone-blue" aria-hidden="true"><i style="height:42%"></i><i style="height:66%"></i><i style="height:58%"></i><i style="height:90%"></i></div>
+        </article>
+
+        <article class="kpi-card">
+          <div class="stat-icon tone-blue"><svg aria-hidden="true"><use href="#i-droplet"/></svg></div>
+          <div class="kpi-copy">
+            <span>Tamamlanan Hat Uzunluğu</span>
+            <strong>12,4 <small>km</small></strong>
+            <small class="up"><svg aria-hidden="true"><use href="#i-arrow-up-right"/></svg>+2,1 km <em>Önceki aya göre</em></small>
+          </div>
+          <div class="spark tone-blue" aria-hidden="true"><i style="height:38%"></i><i style="height:54%"></i><i style="height:72%"></i><i style="height:94%"></i></div>
+        </article>
+
+        <article class="kpi-card">
+          <div class="stat-icon tone-amber"><svg aria-hidden="true"><use href="#i-excavator"/></svg></div>
+          <div class="kpi-copy">
+            <span>Açılan Kazı Miktarı</span>
+            <strong>142 <small>adet</small></strong>
+            <small class="up"><svg aria-hidden="true"><use href="#i-arrow-up-right"/></svg>+28 adet <em>Önceki aya göre</em></small>
+          </div>
+          <div class="spark tone-amber" aria-hidden="true"><i style="height:46%"></i><i style="height:70%"></i><i style="height:60%"></i><i style="height:100%"></i></div>
+        </article>
+
+        <article class="kpi-card">
+          <div class="stat-icon tone-green"><svg aria-hidden="true"><use href="#i-users"/></svg></div>
+          <div class="kpi-copy">
+            <span>Ekip Verimliliği</span>
+            <strong>3,8 <small>m/gün</small></strong>
+            <small class="up"><svg aria-hidden="true"><use href="#i-arrow-up-right"/></svg>+12% <em>Önceki aya göre</em></small>
+          </div>
+          <div class="spark tone-green" aria-hidden="true"><i style="height:50%"></i><i style="height:78%"></i><i style="height:64%"></i><i style="height:86%"></i></div>
+        </article>
+      </div>
+
+      <div class="charts-grid">
+        <article class="chart-card">
+          <div class="chart-head">
+            <h3><svg aria-hidden="true"><use href="#i-trend-up"/></svg>Proje İlerleme Grafiği</h3>
+            <span class="mini-select">Aylık <svg aria-hidden="true"><use href="#i-chevron-down"/></svg></span>
+          </div>
+          <p class="chart-sub">Kümülatif tamamlanan hat uzunluğu</p>
+          <svg class="line-chart" viewBox="0 0 220 150" role="img" aria-label="Aylara göre proje ilerlemesi">
+            <defs>
+              <linearGradient id="area" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#2b7ff0" stop-opacity=".28"/>
+                <stop offset="1" stop-color="#2b7ff0" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <g stroke="#e7eef7" stroke-width="1">
+              <path d="M28 12h180M28 40h180M28 68h180M28 96h180M28 124h180"/>
+            </g>
+            <g fill="#8b9bb0" font-size="7.5" font-family="system-ui">
+              <text x="2" y="15">20</text><text x="2" y="43">15</text><text x="2" y="71">10</text><text x="2" y="99">5</text><text x="9" y="127">0</text>
+              <text x="28" y="142">Oca</text><text x="60" y="142">Şub</text><text x="92" y="142">Mar</text><text x="124" y="142">Nis</text><text x="156" y="142">May</text><text x="188" y="142">Haz</text>
+            </g>
+            <path d="M40 122 76 114 112 103 148 88 184 68 208 56V124H40Z" fill="url(#area)"/>
+            <path d="M40 122 76 114 112 103 148 88 184 68 208 56" fill="none" stroke="#2b7ff0" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+            <g fill="#2b7ff0" stroke="#fff" stroke-width="1.6">
+              <circle cx="40" cy="122" r="2.6"/><circle cx="76" cy="114" r="2.6"/><circle cx="112" cy="103" r="2.6"/>
+              <circle cx="148" cy="88" r="2.6"/><circle cx="184" cy="68" r="2.6"/><circle cx="208" cy="56" r="3.2"/>
+            </g>
+            <g>
+              <rect x="176" y="34" width="38" height="16" rx="5" fill="#2b7ff0"/>
+              <text x="195" y="45" text-anchor="middle" font-size="8" font-weight="700" fill="#fff" font-family="system-ui">12,4 km</text>
+            </g>
+          </svg>
+        </article>
+
+        <article class="chart-card">
+          <div class="chart-head">
+            <h3><svg aria-hidden="true"><use href="#i-reports"/></svg>Açılan Kazı Miktarı</h3>
+            <span class="mini-select">Aylık <svg aria-hidden="true"><use href="#i-chevron-down"/></svg></span>
+          </div>
+          <p class="chart-sub">Aylık kazı sayıları</p>
+          <svg class="bar-chart" viewBox="0 0 220 150" role="img" aria-label="Aylara göre açılan kazı miktarı">
+            <g stroke="#e7eef7" stroke-width="1">
+              <path d="M24 12h186M24 43h186M24 74h186M24 105h186M24 136h186"/>
+            </g>
+            <g fill="#8b9bb0" font-size="7.5" font-family="system-ui">
+              <text x="2" y="14">200</text><text x="2" y="45">150</text><text x="2" y="76">100</text><text x="2" y="107">50</text><text x="12" y="139">0</text>
+              <text x="32" y="149">Oca</text><text x="64" y="149">Şub</text><text x="96" y="149">Mar</text><text x="128" y="149">Nis</text><text x="160" y="149">May</text><text x="190" y="149">Haz</text>
+            </g>
+            <g fill="#f2c977">
+              <rect x="34" y="98" width="18" height="38" rx="3"/>
+              <rect x="66" y="86" width="18" height="50" rx="3"/>
+              <rect x="98" y="80" width="18" height="56" rx="3"/>
+              <rect x="130" y="64" width="18" height="72" rx="3"/>
+              <rect x="162" y="48" width="18" height="88" rx="3"/>
+            </g>
+            <rect x="194" y="30" width="18" height="106" rx="3" fill="#f0a91f"/>
+            <g>
+              <rect x="181" y="12" width="39" height="15" rx="4" fill="#f0a91f"/>
+              <text x="200.5" y="22.5" text-anchor="middle" font-size="8" font-weight="700" fill="#fff" font-family="system-ui">142</text>
+            </g>
+          </svg>
+        </article>
+      </div>
+
+      <div class="report-bottom-grid">
+        <article class="donut-card">
+          <div class="chart-head"><h3><svg aria-hidden="true"><use href="#i-layers"/></svg>Altyapı Türlerine Göre Dağılım</h3></div>
+          <div class="donut-wrap">
+            <div class="donut">
+              <div class="donut-center"><strong>20 km</strong><small>Toplam</small></div>
+            </div>
+            <ul class="legend">
+              <li><i class="dot blue"></i>İçme Suyu <b>45%</b></li>
+              <li><i class="dot green"></i>Kanalizasyon <b>25%</b></li>
+              <li><i class="dot purple"></i>Yağmur Suyu <b>15%</b></li>
+              <li><i class="dot amber"></i>Doğalgaz <b>10%</b></li>
+              <li><i class="dot gray"></i>Telekom <b>5%</b></li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="approvals-card">
+          <div class="chart-head"><h3><svg aria-hidden="true"><use href="#i-clock"/></svg>Onay Bekleyenler</h3></div>
+          <div class="approval-list">
+            <button type="button" data-soon><span class="appr-icon tone-amber"><svg aria-hidden="true"><use href="#i-excavator"/></svg></span><span>Kazı Onayı</span><b>12</b><svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg></button>
+            <button type="button" data-soon><span class="appr-icon tone-brown"><svg aria-hidden="true"><use href="#i-clipboard"/></svg></span><span>Malzeme Onayı</span><b>8</b><svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg></button>
+            <button type="button" data-soon><span class="appr-icon tone-green"><svg aria-hidden="true"><use href="#i-check"/></svg></span><span>İmalat Onayı</span><b>5</b><svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg></button>
+            <button type="button" data-soon><span class="appr-icon tone-purple"><svg aria-hidden="true"><use href="#i-layers"/></svg></span><span>As-Built Onayı</span><b>3</b><svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg></button>
+          </div>
+        </article>
+      </div>
+
+      <article class="reports-list-card">
+        <div class="chart-head">
+          <h3><svg aria-hidden="true"><use href="#i-file"/></svg>Son Raporlar</h3>
+          <a class="link" href="#reports">Tümünü Gör <svg aria-hidden="true"><use href="#i-chevron"/></svg></a>
+        </div>
+        <div class="report-file">
+          <span class="file-chip pdf">PDF</span>
+          <div class="file-copy"><strong>Aylık Proje İlerleme Raporu</strong><small>Haziran 2025 • PDF • 2,4 MB</small></div>
+          <span class="file-date">30 Haz 2025</span>
+          <button class="icon-btn" type="button" data-soon aria-label="İndir"><svg aria-hidden="true"><use href="#i-download"/></svg></button>
+          <button class="icon-btn" type="button" data-soon aria-label="Daha fazla"><svg aria-hidden="true"><use href="#i-more"/></svg></button>
+        </div>
+        <div class="report-file">
+          <span class="file-chip xls">XLS</span>
+          <div class="file-copy"><strong>Kazı ve İmalat Detay Raporu</strong><small>Haziran 2025 • Excel • 1,8 MB</small></div>
+          <span class="file-date">29 Haz 2025</span>
+          <button class="icon-btn" type="button" data-soon aria-label="İndir"><svg aria-hidden="true"><use href="#i-download"/></svg></button>
+          <button class="icon-btn" type="button" data-soon aria-label="Daha fazla"><svg aria-hidden="true"><use href="#i-more"/></svg></button>
+        </div>
+        <div class="report-file">
+          <span class="file-chip pdf">PDF</span>
+          <div class="file-copy"><strong>Ekip Performans Raporu</strong><small>Mayıs 2025 • PDF • 1,2 MB</small></div>
+          <span class="file-date">31 May 2025</span>
+          <button class="icon-btn" type="button" data-soon aria-label="İndir"><svg aria-hidden="true"><use href="#i-download"/></svg></button>
+          <button class="icon-btn" type="button" data-soon aria-label="Daha fazla"><svg aria-hidden="true"><use href="#i-more"/></svg></button>
+        </div>
+      </article>
+
+    </section>
+
+  </main>
+
+  <nav class="bottom-nav" aria-label="Ana menü">
+    <a class="nav-item is-active" href="#home" data-nav="home">
+      <svg aria-hidden="true"><use href="#i-home"/></svg><span>Ana Sayfa</span>
+    </a>
+    <a class="nav-item" href="#projects" data-nav="projects">
+      <svg aria-hidden="true"><use href="#i-projects"/></svg><span>Projeler</span>
+    </a>
+    <a class="nav-item" href="#map" data-nav="map">
+      <svg aria-hidden="true"><use href="#i-map"/></svg><span>Harita</span>
+    </a>
+    <a class="nav-item" href="#records" data-nav="records">
+      <svg aria-hidden="true"><use href="#i-records"/></svg><span>Kayıtlar</span>
+    </a>
+    <a class="nav-item" href="#reports" data-nav="reports">
+      <svg aria-hidden="true"><use href="#i-reports"/></svg><span>Raporlar</span>
+    </a>
+  </nav>
+
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="earth" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b39363"/>
+      <stop offset="1" stop-color="#8c6f45"/>
+    </linearGradient>
+    <linearGradient id="pipe" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d9d9d4"/>
+      <stop offset="1" stop-color="#9e9e97"/>
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" fill="url(#earth)"/>
+  <path d="M0 0h200v44L0 66Z" fill="#7c8a5c"/>
+  <path d="M0 74 200 52v14L0 92Z" fill="#5d6b45" opacity=".6"/>
+  <path d="M20 200 38 58h124l20 142Z" fill="#6b5535"/>
+  <path d="M34 200 50 66h100l18 134Z" fill="#4e3f28"/>
+  <g>
+    <ellipse cx="100" cy="120" rx="54" ry="58" fill="#8d8c84"/>
+    <ellipse cx="100" cy="120" rx="45" ry="49" fill="#6f6e66"/>
+    <ellipse cx="100" cy="120" rx="36" ry="40" fill="#3d3d37"/>
+    <ellipse cx="100" cy="120" rx="34" ry="38" fill="#24241f"/>
+  </g>
+  <path d="M46 70 100 128 158 68" fill="none" stroke="#e0b34a" stroke-width="4" stroke-dasharray="10 8" opacity=".9"/>
+  <g fill="#c9b48f" opacity=".5">
+    <circle cx="16" cy="140" r="3"/><circle cx="182" cy="118" r="4"/><circle cx="30" cy="180" r="2"/>
+    <circle cx="174" cy="172" r="3"/><circle cx="16" cy="104" r="2"/>
+  </g>
+  <rect x="0" y="0" width="200" height="200" fill="#000" opacity=".06"/>
+</svg>

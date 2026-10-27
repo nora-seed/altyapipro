@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#bfe4f6"/>
+      <stop offset="1" stop-color="#eaf6fc"/>
+    </linearGradient>
+    <linearGradient id="hill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#87a98c"/>
+      <stop offset="1" stop-color="#6b9075"/>
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" fill="url(#sky)"/>
+  <path d="M0 92 30 62 58 84 84 54 116 86 148 58 176 82 200 66V200H0Z" fill="url(#hill)"/>
+  <path d="M0 112 44 92 84 110 126 88 168 108 200 96V200H0Z" fill="#597c62" opacity=".65"/>
+  <g>
+    <rect x="18" y="118" width="22" height="16" fill="#e8ddc8"/>
+    <path d="M15 118 29 108 43 118Z" fill="#b3563f"/>
+    <rect x="45" y="124" width="26" height="20" fill="#ded1b8"/>
+    <path d="M42 124 58 113 74 124Z" fill="#a34c37"/>
+    <rect x="78" y="114" width="20" height="18" fill="#e6d9c2"/>
+    <path d="M75 114 88 105 101 114Z" fill="#b3563f"/>
+    <rect x="104" y="122" width="30" height="22" fill="#d9cbb1"/>
+    <path d="M101 122 119 111 137 122Z" fill="#99452f"/>
+    <rect x="140" y="116" width="22" height="17" fill="#e8ddc8"/>
+    <path d="M137 116 151 106 165 116Z" fill="#b3563f"/>
+    <rect x="168" y="124" width="24" height="19" fill="#ded1b8"/>
+    <path d="M165 124 181 113 197 124Z" fill="#a34c37"/>
+  </g>
+  <g fill="#4f7a54">
+    <circle cx="38" cy="112" r="6"/><circle cx="70" cy="108" r="5"/><circle cx="97" cy="110" r="6"/>
+    <circle cx="136" cy="107" r="5"/><circle cx="175" cy="112" r="6"/>
+  </g>
+  <rect y="138" width="200" height="62" fill="#7d8a72"/>
+  <path d="M0 168h200v8H0z" fill="#aab3a0" opacity=".5"/>
+  <path d="M0 140h200v6H0z" fill="#e9e3d5" opacity=".7"/>
+  <g fill="#5f7460">
+    <rect x="8" y="150" width="10" height="14"/><rect x="30" y="152" width="8" height="12"/>
+    <rect x="56" y="148" width="12" height="16"/><rect x="86" y="153" width="9" height="11"/>
+    <rect x="120" y="149" width="11" height="15"/><rect x="152" y="152" width="10" height="12"/>
+    <rect x="176" y="148" width="12" height="16"/>
+  </g>
+</svg>
