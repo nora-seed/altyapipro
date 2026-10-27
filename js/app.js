@@ -1,6 +1,6 @@
 /* ============================================================
    AltyapıPro — PWA istemci mantığı
-   Adım 2: dinamik Ana Sayfa, Projeler, detay ve proje formu
+   Adım 2: boş başlangıç, gerçek proje/kayıt yönetimi
    ============================================================ */
 (function () {
   'use strict';
@@ -9,8 +9,11 @@
   const $$ = (sel, ctx = document) => Array.from(ctx.querySelectorAll(sel));
   const data = window.APP_DATA || { projects: [], records: [] };
 
-  const STORAGE_KEY = 'altyapipro.projects.v1';
-  const SYNC_KEY = 'altyapipro.lastSync.v1';
+  const STORAGE = {
+    projects: 'altyapipro.projects.v2',
+    records: 'altyapipro.records.v1',
+    lastChange: 'altyapipro.lastChange.v1'
+  };
 
   const STATUS = {
     ongoing: { label: 'Devam Ediyor', className: 'ongoing' },
@@ -26,8 +29,24 @@
     'Telekom Altyapısı': 'assets/telecom.svg'
   };
 
+  const RECORD_TYPES = {
+    work: { label: 'İmalat', tone: 'blue', icon: 'i-waves', defaultTitle: 'Saha İmalatı' },
+    service: { label: 'Abone Bağlantısı', tone: 'green', icon: 'i-users', defaultTitle: 'Abone Bağlantısı' },
+    dig: { label: 'Kazı', tone: 'amber', icon: 'i-excavator', defaultTitle: 'Kazı Çalışması' },
+    photo: { label: 'Fotoğraf', tone: 'purple', icon: 'i-camera', defaultTitle: 'Saha Fotoğrafı' },
+    other: { label: 'Diğer', tone: 'brown', icon: 'i-pin', defaultTitle: 'Saha Kaydı' }
+  };
+
+  const RECORD_STATUS = {
+    completed: { label: 'Tamamlandı', className: 'completed' },
+    ongoing: { label: 'Devam Ediyor', className: 'ongoing' },
+    pending: { label: 'Onay Bekliyor', className: 'pending' },
+    error: { label: 'Sorun Var', className: 'error' }
+  };
+
   const state = {
     projects: [],
+    records: [],
     projectStatus: 'all',
     projectType: 'all',
     projectProvince: 'all',
@@ -37,7 +56,12 @@
     recordQuery: '',
     editingId: null,
     formReturnId: null,
-    sheetFocus: null
+    pendingRecordType: null,
+    recordFormType: 'work',
+    pendingPhoto: '',
+    sheetFocus: null,
+    confirmAction: null,
+    confirmReturnProject: null
   };
 
   const esc = (value) =>
@@ -56,11 +80,20 @@
     const parsed = Number.parseInt(value, 10);
     return Number.isFinite(parsed) ? parsed : fallback;
   };
+  const decimal = (value, fallback = 0) => {
+    const parsed = Number(String(value == null ? '' : value).replace(',', '.'));
+    return Number.isFinite(parsed) ? parsed : fallback;
+  };
   const cleanText = (value) => String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
+  const formatNumber = (value) =>
+    new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 1 }).format(value);
 
   const statusInfo = (status) => STATUS[status] || STATUS.ongoing;
+  const recordTypeInfo = (type) => RECORD_TYPES[type] || RECORD_TYPES.work;
+  const recordStatusInfo = (status) => RECORD_STATUS[status] || RECORD_STATUS.completed;
 
   function normalizeProject(project, index) {
+    project = project || {};
     const status = STATUS[project.status] ? project.status : 'ongoing';
     const info = statusInfo(status);
     const province = cleanText(project.province);
@@ -92,6 +125,38 @@
     };
   }
 
+  function normalizeRecord(record, index) {
+    record = record || {};
+    const type = RECORD_TYPES[record.type] ? record.type : 'work';
+    const typeInfo = recordTypeInfo(type);
+    const status = RECORD_STATUS[record.status] ? record.status : 'completed';
+    const statusInfoValue = recordStatusInfo(status);
+    const created = new Date(record.createdAt);
+    const createdAt = Number.isNaN(created.getTime()) ? new Date().toISOString() : created.toISOString();
+
+    return {
+      id: String(record.id || `record-${Date.now()}-${index}`),
+      projectId: String(record.projectId || ''),
+      type,
+      title: cleanText(record.title) || typeInfo.defaultTitle,
+      location: cleanText(record.location) || 'Konum belirtilmedi',
+      team: cleanText(record.team),
+      people: Math.max(0, num(record.people, 0)),
+      meters: Math.max(0, decimal(record.meters, 0)),
+      status,
+      statusLabel: statusInfoValue.label,
+      statusClass: statusInfoValue.className,
+      tone: typeInfo.tone,
+      icon: typeInfo.icon,
+      note: cleanText(record.note),
+      photo:
+        typeof record.photo === 'string' && record.photo.indexOf('data:image/') === 0
+          ? record.photo
+          : '',
+      createdAt
+    };
+  }
+
   function readStorage(key) {
     try {
       return window.localStorage.getItem(key);
@@ -113,8 +178,7 @@
     const fallback = Array.isArray(data.projects)
       ? data.projects.map((project, index) => normalizeProject(project, index))
       : [];
-
-    const saved = readStorage(STORAGE_KEY);
+    const saved = readStorage(STORAGE.projects);
     if (!saved) return fallback;
 
     try {
@@ -126,35 +190,118 @@
     }
   }
 
+  function loadRecords() {
+    const fallback = Array.isArray(data.records)
+      ? data.records.map((record, index) => normalizeRecord(record, index))
+      : [];
+    const saved = readStorage(STORAGE.records);
+    if (!saved) return fallback;
+
+    try {
+      const parsed = JSON.parse(saved);
+      if (!Array.isArray(parsed)) return fallback;
+      return parsed.map((record, index) => normalizeRecord(record, index));
+    } catch (error) {
+      return fallback;
+    }
+  }
+
   function saveProjects() {
-    return writeStorage(STORAGE_KEY, JSON.stringify(state.projects));
+    return writeStorage(STORAGE.projects, JSON.stringify(state.projects));
   }
 
-  function allRecords() {
-    return (Array.isArray(data.records) ? data.records : []).reduce((rows, group) => {
-      const items = Array.isArray(group.items) ? group.items : [];
-      items.forEach((record) => rows.push(record));
-      return rows;
-    }, []);
+  function saveRecords() {
+    return writeStorage(STORAGE.records, JSON.stringify(state.records));
   }
 
-  function recordsFor(projectId) {
-    return allRecords().filter((record) => record.projectId === projectId);
+  function startOfDay(date) {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
   }
 
-  function currentTime() {
+  function isSameDay(a, b) {
+    return (
+      a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate()
+    );
+  }
+
+  function dayDifference(date, reference = new Date()) {
+    return Math.round((startOfDay(reference) - startOfDay(date)) / 86400000);
+  }
+
+  function formatTime(date) {
     return new Intl.DateTimeFormat('tr-TR', {
       hour: '2-digit',
       minute: '2-digit'
-    }).format(new Date());
+    }).format(date);
   }
 
-  function currentDate() {
+  function formatRecordTime(record) {
+    const date = new Date(record.createdAt);
+    if (Number.isNaN(date.getTime())) return '—';
+    const diff = dayDifference(date);
+    if (diff === 0) return `Bugün ${formatTime(date)}`;
+    if (diff === 1) return `Dün ${formatTime(date)}`;
     return new Intl.DateTimeFormat('tr-TR', {
       day: '2-digit',
       month: 'short',
-      year: 'numeric'
-    }).format(new Date());
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
+  }
+
+  function recordGroup(record) {
+    const date = new Date(record.createdAt);
+    const diff = dayDifference(date);
+    if (diff === 0) return 'Bugün';
+    if (diff === 1) return 'Dün';
+    if (diff > 1 && diff < 7) return 'Bu Hafta';
+    return 'Daha Önce';
+  }
+
+  function recordsFor(projectId) {
+    return state.records
+      .filter((record) => record.projectId === projectId)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }
+
+  function currentFeaturedProject() {
+    return (
+      state.projects.find((project) => project.status === 'ongoing') ||
+      state.projects.find((project) => project.status === 'planned') ||
+      state.projects[0] ||
+      null
+    );
+  }
+
+  function summaryForDay(date) {
+    const list = state.records.filter((record) => isSameDay(new Date(record.createdAt), date));
+    const length = list
+      .filter((record) => record.type === 'work')
+      .reduce((total, record) => total + record.meters, 0);
+    const excavations = list.filter((record) => record.type === 'dig').length;
+    const teams = new Map();
+
+    list.forEach((record) => {
+      if (!record.team) return;
+      const current = teams.get(record.team) || 0;
+      teams.set(record.team, Math.max(current, record.people || 0));
+    });
+
+    return {
+      length,
+      excavations,
+      teams: teams.size,
+      personnel: Array.from(teams.values()).reduce((total, value) => total + value, 0)
+    };
+  }
+
+  function markLocalChange() {
+    const stamp = `Bugün ${formatTime(new Date())}`;
+    writeStorage(STORAGE.lastChange, stamp);
+    const sub = $('#syncSub');
+    if (sub) sub.textContent = `Son değişiklik: ${stamp}`;
   }
 
   /* ---------------- Navigasyon ---------------- */
@@ -196,7 +343,7 @@
     });
   });
 
-  /* ---------------- Sayfa seçim etiketleri ---------------- */
+  /* ---------------- Seçim etiketleri ---------------- */
 
   function syncSelectLabels() {
     $$('.select-wrap').forEach((wrap) => {
@@ -298,7 +445,18 @@
     });
 
     list.innerHTML = sortProjects(visible).map(projectCard).join('');
-    if (empty) empty.hidden = visible.length !== 0;
+    if (empty) {
+      empty.hidden = visible.length !== 0;
+      const strong = empty.querySelector('strong');
+      const copy = empty.querySelector('p');
+      if (!state.projects.length) {
+        if (strong) strong.textContent = 'Henüz proje yok';
+        if (copy) copy.textContent = 'Yeni Proje ile ilk projenizi oluşturun.';
+      } else {
+        if (strong) strong.textContent = 'Proje bulunamadı';
+        if (copy) copy.textContent = 'Arama veya filtreleri değiştirerek tekrar deneyin.';
+      }
+    }
   }
 
   const projectFilterGroup = $('#projectFilters');
@@ -354,25 +512,30 @@
     const wrap = $('#homeRecent');
     if (!wrap) return;
 
-    const recent = allRecords().slice(0, 3);
+    const recent = state.records
+      .slice()
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 3);
+
     if (!recent.length) {
-      wrap.innerHTML = '<div class="recent-empty">Henüz saha kaydı bulunmuyor.</div>';
+      wrap.innerHTML =
+        '<div class="recent-empty">Henüz saha kaydı yok.<br><span>Hızlı işlemlerden ilk kaydını ekleyebilirsin.</span></div>';
       return;
     }
 
     wrap.innerHTML = recent
       .map(
         (record) => `
-        <button type="button" class="recent-item" data-project-id="${esc(record.projectId || '')}">
-          <span class="record-icon tone-${esc(record.tone || 'blue')}">${icon(esc(record.icon || 'i-pin'))}</span>
+        <button type="button" class="recent-item" data-project-id="${esc(record.projectId)}">
+          <span class="record-icon tone-${esc(record.tone)}">${icon(esc(record.icon))}</span>
           <span class="recent-main">
             <span class="recent-top">
               <strong>${esc(record.title)}</strong>
-              <span class="recent-time">${esc(record.time)}</span>
+              <span class="recent-time">${esc(formatRecordTime(record))}</span>
               ${icon('i-chevron', 'chev')}
             </span>
             <span class="recent-addr">${esc(record.location)}</span>
-            <span class="badge ${esc(record.statusClass || 'ongoing')}">${esc(record.status)}</span>
+            <span class="badge ${esc(record.statusClass)}">${esc(record.statusLabel)}</span>
           </span>
         </button>`
       )
@@ -380,59 +543,62 @@
   }
 
   function renderHome() {
-    const summary = data.summary || {};
+    const today = summaryForDay(new Date());
+    const yesterdayDate = new Date();
+    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+    const yesterday = summaryForDay(yesterdayDate);
+    const pending = state.records.filter((record) => record.status === 'pending');
+    const pendingToday = pending.filter((record) => isSameDay(new Date(record.createdAt), new Date())).length;
+
     const setText = (selector, value) => {
       const el = $(selector);
       if (el) el.textContent = value;
     };
 
-    setText('#statLength', summary.length ?? 0);
-    setText('#statLengthPrev', `Dün: ${summary.lengthPrevious ?? 0} m`);
-    setText('#statExcavations', summary.excavations ?? 0);
-    setText('#statExcavationsPrev', `Dün: ${summary.excavationsPrevious ?? 0} adet`);
-    setText('#statTeams', summary.teams ?? 0);
-    setText('#statPersonnel', `Toplam ${summary.personnel ?? 0} personel`);
-    setText('#statPending', summary.pending ?? 0);
+    setText('#statLength', formatNumber(today.length));
+    setText('#statLengthPrev', `Dün: ${formatNumber(yesterday.length)} m`);
+    setText('#statExcavations', today.excavations);
+    setText('#statExcavationsPrev', `Dün: ${yesterday.excavations} adet`);
+    setText('#statTeams', today.teams);
+    setText(
+      '#statPersonnel',
+      today.teams ? `Toplam ${today.personnel} personel` : 'Henüz ekip yok'
+    );
+    setText('#statPending', pending.length);
     setText(
       '#statPendingToday',
-      summary.pendingToday ? `${summary.pendingToday}'ü bugün eklendi` : 'Bugün yeni kayıt yok'
+      pendingToday
+        ? `${pendingToday} tanesi bugün eklendi`
+        : pending.length
+          ? 'Bugün yeni kayıt yok'
+          : 'Onay bekleyen kayıt yok'
     );
 
-    const featured =
-      state.projects.find((project) => project.status === 'ongoing') ||
-      state.projects.find((project) => project.status === 'planned') ||
-      state.projects[0];
-
+    const featured = currentFeaturedProject();
     const featuredCard = $('#featuredCard');
     const featuredThumb = $('#featuredThumb');
-    const featuredEyebrow = $('#featuredEyebrow');
-    const featuredTitle = $('#featuredTitle');
-    const featuredLocation = $('#featuredLocation');
-    const featuredType = $('#featuredType');
-    const progressValue = $('#homeProgressValue');
-    const progressBar = $('#homeProgressBar');
-    const homeLength = $('#homeLength');
-    const homeTotal = $('#homeTotal');
-    const homeDays = $('#homeDays');
+    const progressCard = $('#homeProgressCard');
 
     if (!featured) {
       if (featuredCard) {
         featuredCard.removeAttribute('data-project-id');
-        featuredCard.setAttribute('aria-label', 'Henüz proje yok');
+        featuredCard.setAttribute('aria-label', 'Yeni proje oluştur');
       }
       if (featuredThumb) {
-        featuredThumb.removeAttribute('src');
+        featuredThumb.src = 'assets/city.svg';
         featuredThumb.alt = '';
       }
-      setText('#featuredEyebrow', 'Proje Yok');
-      setText('#featuredTitle', 'Henüz proje eklenmedi');
-      setText('#featuredLocation', 'Yeni proje ekleyerek başlayın');
-      setText('#featuredType', '—');
+      setText('#featuredEyebrow', 'Başlangıç');
+      setText('#featuredTitle', 'İlk projeni oluştur');
+      setText('#featuredLocation', 'Yeni proje eklemek için dokun');
+      setText('#featuredType', 'Proje yok');
       setText('#homeProgressValue', '%0');
-      if (progressBar) progressBar.style.width = '0%';
+      const bar = $('#homeProgressBar');
+      if (bar) bar.style.width = '0%';
       setText('#homeLength', '0 km');
       setText('#homeTotal', '0 km');
       setText('#homeDays', '0 gün');
+      if (progressCard) progressCard.hidden = true;
     } else {
       if (featuredCard) {
         featuredCard.dataset.projectId = featured.id;
@@ -442,18 +608,51 @@
         featuredThumb.src = featured.thumb;
         featuredThumb.alt = `${featured.title} projesi`;
       }
-      if (featuredEyebrow) featuredEyebrow.textContent = featured.statusLabel;
-      if (featuredTitle) featuredTitle.textContent = featured.title;
-      if (featuredLocation) featuredLocation.textContent = featured.location;
-      if (featuredType) featuredType.textContent = featured.type;
-      if (progressValue) progressValue.textContent = `%${featured.progress}`;
-      if (progressBar) progressBar.style.width = `${featured.progress}%`;
-      if (homeLength) homeLength.textContent = featured.length;
-      if (homeTotal) homeTotal.textContent = featured.total;
-      if (homeDays) homeDays.textContent = `${featured.days} gün`;
+      setText('#featuredEyebrow', featured.statusLabel);
+      setText('#featuredTitle', featured.title);
+      setText('#featuredLocation', featured.location);
+      setText('#featuredType', featured.type);
+      setText('#homeProgressValue', `%${featured.progress}`);
+      setText('#homeLength', featured.length);
+      setText('#homeTotal', featured.total);
+      setText('#homeDays', `${featured.days} gün`);
+      const bar = $('#homeProgressBar');
+      if (bar) bar.style.width = `${featured.progress}%`;
+      if (progressCard) progressCard.hidden = false;
     }
 
     renderRecentHome();
+    renderMapActive(featured);
+  }
+
+  function renderMapActive(featured = currentFeaturedProject()) {
+    const card = $('#mapActiveWork');
+    if (!card) return;
+    if (!featured) {
+      card.hidden = true;
+      card.removeAttribute('data-project-id');
+      return;
+    }
+
+    card.hidden = false;
+    card.dataset.projectId = featured.id;
+    const setText = (selector, value) => {
+      const el = $(selector);
+      if (el) el.textContent = value;
+    };
+
+    setText('#mapActiveTitle', featured.title);
+    setText('#mapActiveLocation', featured.location);
+    setText('#mapActiveDate', featured.startDate);
+    setText('#mapActiveTeam', `${featured.personnel} personel`);
+    setText('#mapActiveProgress', `%${featured.progress}`);
+    const bar = $('#mapActiveBar');
+    if (bar) bar.style.width = `${featured.progress}%`;
+    const badge = $('#mapActiveBadge');
+    if (badge) {
+      badge.className = `badge ${featured.status}`;
+      badge.textContent = featured.statusLabel;
+    }
   }
 
   /* ---------------- Sheet yardımcıları ---------------- */
@@ -493,11 +692,48 @@
 
   function closeSheet(sheet) {
     if (!sheet) return;
+
     if (sheet.id === 'projectFormSheet') {
+      const returnId = state.formReturnId;
       state.formReturnId = null;
       state.editingId = null;
+      state.pendingRecordType = null;
+      hideSheet(sheet);
+      if (returnId) openProjectSheet(returnId);
+      return;
+    }
+
+    if (sheet.id === 'confirmSheet') {
+      const returnId = state.confirmReturnProject;
+      state.confirmAction = null;
+      state.confirmReturnProject = null;
+      hideSheet(sheet);
+      if (returnId) openProjectSheet(returnId);
+      return;
+    }
+
+    if (sheet.id === 'recordSheet') {
+      state.pendingPhoto = '';
+      state.pendingRecordType = null;
     }
     hideSheet(sheet);
+  }
+
+  function openConfirm({ title, text, confirmLabel = 'Onayla', danger = false, returnProjectId = null, onConfirm }) {
+    const sheet = $('#confirmSheet');
+    if (!sheet) return;
+    const titleEl = $('#confirmTitle');
+    const textEl = $('#confirmText');
+    const button = $('#confirmYes');
+    if (titleEl) titleEl.textContent = title;
+    if (textEl) textEl.textContent = text;
+    if (button) {
+      button.textContent = confirmLabel;
+      button.className = `btn ${danger ? 'btn-danger' : 'btn-primary'}`;
+    }
+    state.confirmAction = typeof onConfirm === 'function' ? onConfirm : null;
+    state.confirmReturnProject = returnProjectId;
+    showSheet(sheet);
   }
 
   function renderProjectSheet(project) {
@@ -545,12 +781,16 @@
                 .map(
                   (record) => `
                   <div class="detail-record">
-                    <span class="record-icon tone-${esc(record.tone || 'blue')}">${icon(esc(record.icon || 'i-pin'))}</span>
+                    ${
+                      record.photo
+                        ? `<img class="record-photo" src="${esc(record.photo)}" alt="">`
+                        : `<span class="record-icon tone-${esc(record.tone)}">${icon(esc(record.icon))}</span>`
+                    }
                     <span class="detail-record-main">
                       <strong>${esc(record.title)}</strong>
-                      <small>${esc(record.location)} · ${esc(record.team)}</small>
+                      <small>${esc(record.location)}${record.team ? ` · ${esc(record.team)}` : ''}</small>
                     </span>
-                    <time>${esc(record.time)}</time>
+                    <time>${esc(formatRecordTime(record))}</time>
                   </div>`
                 )
                 .join('')
@@ -560,6 +800,7 @@
 
     foot.innerHTML = `
       <button class="btn btn-outline" type="button" data-edit-project="${esc(project.id)}">Düzenle</button>
+      <button class="btn btn-danger" type="button" data-delete-project="${esc(project.id)}">Sil</button>
       <button class="btn btn-primary" type="button" data-close-project-sheet>Kapat</button>`;
   }
 
@@ -573,9 +814,23 @@
     showSheet($('#projectSheet'));
   }
 
+  function deleteProject(projectId) {
+    const project = state.projects.find((item) => item.id === projectId);
+    if (!project) return;
+
+    state.projects = state.projects.filter((item) => item.id !== projectId);
+    state.records = state.records.filter((record) => record.projectId !== projectId);
+    saveProjects();
+    saveRecords();
+    renderAll();
+    renderRecords();
+    markLocalChange();
+    toast('Proje ve bağlı kayıtları silindi.');
+  }
+
   /* ---------------- Proje formu ---------------- */
 
-  function fillForm(project) {
+  function fillProjectForm(project) {
     const setValue = (selector, value) => {
       const el = $(selector);
       if (el) el.value = value == null ? '' : value;
@@ -586,13 +841,19 @@
     setValue('#projectStatus', project ? project.status : 'ongoing');
     setValue('#projectProvince', project ? project.province : '');
     setValue('#projectDistrict', project ? project.district : '');
-    setValue('#projectContractor', project ? project.contractor === 'Belirtilmedi' ? '' : project.contractor : '');
+    setValue(
+      '#projectContractor',
+      project ? (project.contractor === 'Belirtilmedi' ? '' : project.contractor) : ''
+    );
     setValue('#projectLength', project ? project.length : '');
     setValue('#projectTotal', project ? project.total : '');
     setValue('#projectPersonnel', project ? project.personnel : '');
     setValue('#projectDays', project ? project.days : '');
     setValue('#projectProgress', project ? project.progress : 0);
-    setValue('#projectDescription', project ? project.description === 'Açıklama eklenmedi.' ? '' : project.description : '');
+    setValue(
+      '#projectDescription',
+      project ? (project.description === 'Açıklama eklenmedi.' ? '' : project.description) : ''
+    );
 
     const progressValue = $('#projectProgressValue');
     if (progressValue) progressValue.textContent = String(project ? project.progress : 0);
@@ -606,7 +867,7 @@
     state.editingId = project ? project.id : null;
     state.formReturnId = returnToDetail && project ? project.id : null;
 
-    fillForm(project);
+    fillProjectForm(project);
 
     const title = $('#projectFormTitle');
     const submit = $('#projectFormSubmit');
@@ -616,7 +877,7 @@
     showSheet($('#projectFormSheet'));
   }
 
-  function showFormError(message) {
+  function showProjectFormError(message) {
     const error = $('#projectFormError');
     if (!error) return;
     error.textContent = message;
@@ -635,12 +896,12 @@
     const province = value('#projectProvince');
 
     if (!title) {
-      showFormError('Proje adı zorunlu.');
+      showProjectFormError('Proje adı zorunlu.');
       $('#projectName')?.focus();
       return;
     }
     if (!province) {
-      showFormError('İl bilgisi zorunlu.');
+      showProjectFormError('İl bilgisi zorunlu.');
       $('#projectProvince')?.focus();
       return;
     }
@@ -654,25 +915,32 @@
       ? state.projects.find((project) => project.id === state.editingId)
       : null;
 
-    const saved = normalizeProject({
-      id: existing ? existing.id : `project-${Date.now()}`,
-      title,
-      province,
-      district,
-      location: [district, province].filter(Boolean).join(', '),
-      type,
-      status,
-      statusLabel: info.label,
-      progress,
-      length: value('#projectLength') || '0 km',
-      total: value('#projectTotal') || '0 km',
-      personnel: num($('#projectPersonnel')?.value, 0),
-      days: num($('#projectDays')?.value, 0),
-      thumb: THUMBS[type] || (existing ? existing.thumb : 'assets/city.svg'),
-      contractor: value('#projectContractor') || 'Belirtilmedi',
-      startDate: existing ? existing.startDate : currentDate(),
-      description: value('#projectDescription') || 'Açıklama eklenmedi.'
-    }, state.projects.length);
+    const saved = normalizeProject(
+      {
+        id: existing ? existing.id : `project-${Date.now()}`,
+        title,
+        province,
+        district,
+        location: [district, province].filter(Boolean).join(', '),
+        type,
+        status,
+        statusLabel: info.label,
+        progress,
+        length: value('#projectLength') || '0 km',
+        total: value('#projectTotal') || '0 km',
+        personnel: num($('#projectPersonnel')?.value, 0),
+        days: num($('#projectDays')?.value, 0),
+        thumb: THUMBS[type] || (existing ? existing.thumb : 'assets/city.svg'),
+        contractor: value('#projectContractor') || 'Belirtilmedi',
+        startDate: existing ? existing.startDate : new Intl.DateTimeFormat('tr-TR', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric'
+        }).format(new Date()),
+        description: value('#projectDescription') || 'Açıklama eklenmedi.'
+      },
+      state.projects.length
+    );
 
     if (existing) {
       state.projects = state.projects.map((project) =>
@@ -684,37 +952,220 @@
 
     const persisted = saveProjects();
     renderAll();
+    renderRecords();
+    markLocalChange();
     hideSheet($('#projectFormSheet'));
 
     const returnId = state.formReturnId;
+    const pendingType = state.pendingRecordType;
     state.formReturnId = null;
+    state.pendingRecordType = null;
     state.editingId = null;
 
-    if (returnId) openProjectSheet(saved.id);
+    if (pendingType) openRecordForm(pendingType, saved.id);
+    else if (returnId) openProjectSheet(saved.id);
 
     toast(
       persisted
         ? existing
           ? 'Proje güncellendi.'
           : 'Proje eklendi.'
-        : 'Proje güncellendi ancak cihaza kaydedilemedi.'
+        : `Proje ${existing ? 'güncellendi' : 'eklendi'} ancak cihaza kaydedilemedi.`
     );
+  }
+
+  /* ---------------- Saha kaydı formu ---------------- */
+
+  function populateRecordProjects(selectedId) {
+    const select = $('#recordProject');
+    if (!select) return;
+
+    select.innerHTML = state.projects
+      .map(
+        (project) =>
+          `<option value="${esc(project.id)}"${project.id === selectedId ? ' selected' : ''}>${esc(project.title)}</option>`
+      )
+      .join('');
+
+    if (!selectedId && state.projects[0]) select.value = state.projects[0].id;
+  }
+
+  function setRecordTypeDefaults(type, force = false) {
+    const info = recordTypeInfo(type);
+    const title = $('#recordTitle');
+    const previous = recordTypeInfo(state.recordFormType);
+    if (title) {
+      if (force || !title.value.trim() || title.value === previous.defaultTitle) {
+        title.value = info.defaultTitle;
+      }
+      title.placeholder = info.defaultTitle;
+    }
+    state.recordFormType = type;
+  }
+
+  function openRecordForm(type = 'work', projectId = null) {
+    if (!state.projects.length) {
+      state.pendingRecordType = type;
+      openProjectForm();
+      toast('Önce bir proje ekleyin.');
+      return;
+    }
+
+    const info = recordTypeInfo(type);
+    const project =
+      state.projects.find((item) => item.id === projectId) || currentFeaturedProject();
+    const typeSelect = $('#recordType');
+    const projectSelect = $('#recordProject');
+    if (typeSelect) typeSelect.value = type;
+    populateRecordProjects(project ? project.id : state.projects[0].id);
+
+    const setValue = (selector, value) => {
+      const el = $(selector);
+      if (el) el.value = value == null ? '' : value;
+    };
+
+    setValue('#recordTitle', info.defaultTitle);
+    setValue('#recordLocation', project && project.location !== 'Konum belirtilmedi' ? project.location : '');
+    setValue('#recordTeam', '');
+    setValue('#recordPeople', '1');
+    setValue('#recordMeters', '');
+    setValue('#recordStatus', type === 'photo' ? 'pending' : 'completed');
+    setValue('#recordNote', '');
+    setValue('#recordPhoto', '');
+    state.pendingPhoto = '';
+    state.recordFormType = type;
+
+    const preview = $('#recordPhotoPreview');
+    const previewImage = $('#recordPhotoImg');
+    if (preview) preview.hidden = true;
+    if (previewImage) previewImage.removeAttribute('src');
+
+    const error = $('#recordFormError');
+    if (error) error.hidden = true;
+
+    const title = $('#recordFormTitle');
+    const submit = $('#recordFormSubmit');
+    if (title) title.textContent = `${info.label} Ekle`;
+    if (submit) submit.textContent = 'Kaydı Ekle';
+
+    if (projectSelect) projectSelect.disabled = false;
+    showSheet($('#recordSheet'));
+  }
+
+  function showRecordFormError(message) {
+    const error = $('#recordFormError');
+    if (!error) return;
+    error.textContent = message;
+    error.hidden = false;
+  }
+
+  function compressImage(file, maxSize = 900, quality = 0.68) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('read'));
+      reader.onload = () => {
+        const image = new Image();
+        image.onerror = () => reject(new Error('image'));
+        image.onload = () => {
+          const ratio = Math.min(1, maxSize / Math.max(image.width, image.height));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(image.width * ratio));
+          canvas.height = Math.max(1, Math.round(image.height * ratio));
+          const context = canvas.getContext('2d');
+          if (!context) {
+            reject(new Error('canvas'));
+            return;
+          }
+          context.drawImage(image, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        image.src = String(reader.result);
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function handleRecordSubmit(event) {
+    event.preventDefault();
+
+    const value = (selector) => {
+      const el = $(selector);
+      return el ? cleanText(el.value) : '';
+    };
+
+    const project = state.projects.find((item) => item.id === value('#recordProject'));
+    if (!project) {
+      showRecordFormError('Kayıt için proje seçin.');
+      return;
+    }
+
+    const type = RECORD_TYPES[value('#recordType')] ? value('#recordType') : 'work';
+    const info = recordTypeInfo(type);
+    const status = RECORD_STATUS[value('#recordStatus')] ? value('#recordStatus') : 'completed';
+    const title = value('#recordTitle') || info.defaultTitle;
+
+    const record = normalizeRecord(
+      {
+        id: `record-${Date.now()}`,
+        projectId: project.id,
+        type,
+        title,
+        location: value('#recordLocation') || project.location,
+        team: value('#recordTeam'),
+        people: num($('#recordPeople')?.value, 1),
+        meters: decimal($('#recordMeters')?.value, 0),
+        status,
+        note: value('#recordNote'),
+        photo: state.pendingPhoto,
+        createdAt: new Date().toISOString()
+      },
+      state.records.length
+    );
+
+    state.records = [record, ...state.records];
+    let persisted = saveRecords();
+    let photoDropped = false;
+
+    if (!persisted && record.photo) {
+      record.photo = '';
+      state.records = state.records.map((item) => (item.id === record.id ? record : item));
+      persisted = saveRecords();
+      photoDropped = true;
+    }
+
+    renderAll();
+    renderRecords();
+    closeSheet($('#recordSheet'));
+    markLocalChange();
+
+    if (!persisted) {
+      toast('Kayıt eklendi ancak cihazda yeterli kayıt alanı yok.');
+    } else if (photoDropped) {
+      toast('Kayıt eklendi; fotoğraf yer kalmadığı için kaydedilmedi.');
+    } else {
+      toast('Saha kaydı eklendi.');
+    }
   }
 
   /* ---------------- Kayıtlar ---------------- */
 
-  function recordCard(record) {
+  function recordCard(record, project) {
     return `
-      <button type="button" class="record" data-type="${esc(record.type)}" data-soon>
-        <span class="record-icon tone-${esc(record.tone)}">${icon(esc(record.icon))}</span>
+      <button type="button" class="record" data-project-id="${esc(record.projectId)}">
+        ${
+          record.photo
+            ? `<img class="record-photo" src="${esc(record.photo)}" alt="">`
+            : `<span class="record-icon tone-${esc(record.tone)}">${icon(esc(record.icon))}</span>`
+        }
         <span class="record-main">
           <span class="record-title">${esc(record.title)}</span>
+          <span class="meta">${icon('i-projects')}${esc(project ? project.title : 'Proje silinmiş')}</span>
           <span class="meta">${icon('i-pin')}${esc(record.location)}</span>
-          <span class="meta">${icon('i-users')}${esc(record.team)}</span>
+          ${record.team ? `<span class="meta">${icon('i-users')}${esc(record.team)}</span>` : ''}
         </span>
         <span class="record-side">
-          <span class="side-top"><time>${esc(record.time)}</time>${icon('i-chevron', 'chev')}</span>
-          <span class="badge ${esc(record.statusClass)}">${esc(record.status)}</span>
+          <span class="side-top"><time>${esc(formatRecordTime(record))}</time>${icon('i-chevron', 'chev')}</span>
+          <span class="badge ${esc(record.statusClass)}">${esc(record.statusLabel)}</span>
         </span>
       </button>`;
   }
@@ -725,34 +1176,58 @@
     if (!wrap) return;
 
     const query = normalize(state.recordQuery.trim());
-    let total = 0;
+    const projects = new Map(state.projects.map((project) => [project.id, project]));
+    const filtered = state.records
+      .filter((record) => {
+        const project = projects.get(record.projectId);
+        const typeOk = state.recordType === 'all' || record.type === state.recordType;
+        const queryOk =
+          !query ||
+          normalize(record.title).includes(query) ||
+          normalize(record.location).includes(query) ||
+          normalize(record.team).includes(query) ||
+          normalize(record.note).includes(query) ||
+          normalize(project ? project.title : '').includes(query);
+        return typeOk && queryOk;
+      })
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-    const html = data.records
-      .map((group) => {
-        const items = group.items.filter((record) => {
-          const typeOk = state.recordType === 'all' || record.type === state.recordType;
-          const queryOk =
-            !query ||
-            normalize(record.title).includes(query) ||
-            normalize(record.location).includes(query) ||
-            normalize(record.team).includes(query);
-          return typeOk && queryOk;
-        });
-        if (!items.length) return '';
+    const groups = ['Bugün', 'Dün', 'Bu Hafta', 'Daha Önce'];
+    const grouped = new Map(groups.map((label) => [label, []]));
+    filtered.forEach((record) => {
+      const label = recordGroup(record);
+      if (!grouped.has(label)) grouped.set(label, []);
+      grouped.get(label).push(record);
+    });
+
+    let total = 0;
+    wrap.innerHTML = Array.from(grouped.entries())
+      .filter(([, items]) => items.length)
+      .map(([label, items]) => {
         total += items.length;
         return `
           <section class="record-group">
             <div class="group-head">
-              <h2>${esc(group.label)}</h2>
+              <h2>${esc(label)}</h2>
               <span>${items.length} kayıt</span>
             </div>
-            ${items.map(recordCard).join('')}
+            ${items.map((record) => recordCard(record, projects.get(record.projectId))).join('')}
           </section>`;
       })
       .join('');
 
-    wrap.innerHTML = html;
-    if (empty) empty.hidden = total !== 0;
+    if (empty) {
+      empty.hidden = total !== 0;
+      const strong = empty.querySelector('strong');
+      const copy = empty.querySelector('p');
+      if (!state.records.length) {
+        if (strong) strong.textContent = 'Henüz kayıt yok';
+        if (copy) copy.textContent = 'Ana sayfadaki hızlı işlemlerden ilk kaydını ekle.';
+      } else {
+        if (strong) strong.textContent = 'Kayıt bulunamadı';
+        if (copy) copy.textContent = 'Arama veya filtreleri değiştirerek tekrar deneyin.';
+      }
+    }
   }
 
   const recordFilterGroup = $('#recordFilters');
@@ -802,7 +1277,7 @@
     applyBranch(initialBranch ? initialBranch.dataset.branch : 'water');
   }
 
-  /* ---------------- Senkronizasyon ---------------- */
+  /* ---------------- Yerel yenileme ---------------- */
 
   function setupSync() {
     const syncBtn = $('#syncBtn');
@@ -811,8 +1286,8 @@
     const syncSub = $('#syncSub');
     const syncBar = $('#syncBar');
 
-    const stored = readStorage(SYNC_KEY);
-    if (stored && syncSub) syncSub.textContent = `Son eşitleme: ${stored}`;
+    const stored = readStorage(STORAGE.lastChange);
+    if (stored && syncSub) syncSub.textContent = `Son değişiklik: ${stored}`;
 
     if (!syncBtn) return;
 
@@ -822,20 +1297,19 @@
       syncBtn.disabled = true;
       syncBtn.classList.add('is-syncing');
       syncBar?.classList.add('is-syncing');
-      if (syncText) syncText.textContent = 'Eşitleniyor';
-      if (syncTitle) syncTitle.textContent = 'Veriler eşitleniyor…';
+      if (syncText) syncText.textContent = 'Yenileniyor';
+      if (syncTitle) syncTitle.textContent = 'Yerel veriler okunuyor…';
 
       window.setTimeout(() => {
-        const stamp = `Bugün ${currentTime()}`;
-        writeStorage(SYNC_KEY, stamp);
-        if (syncSub) syncSub.textContent = `Son eşitleme: ${stamp}`;
-        if (syncTitle) syncTitle.textContent = 'Veriler senkronize edildi';
-        if (syncText) syncText.textContent = 'Çevrim içi';
+        renderAll();
+        renderRecords();
+        if (syncTitle) syncTitle.textContent = 'Tüm veriler bu cihazda';
+        if (syncText) syncText.textContent = 'Yenile';
         syncBtn.disabled = false;
         syncBtn.classList.remove('is-syncing');
         syncBar?.classList.remove('is-syncing');
-        toast('Veriler senkronize edildi.');
-      }, 900);
+        toast('Yerel veriler yenilendi.');
+      }, 600);
     });
   }
 
@@ -852,10 +1326,21 @@
   }
 
   document.addEventListener('click', (event) => {
-    const closer = event.target.closest('[data-close-project-sheet], [data-close-project-form]');
+    const closer = event.target.closest(
+      '[data-close-project-sheet], [data-close-project-form], [data-close-record-sheet], [data-close-confirm]'
+    );
     if (closer) {
-      const sheet = closer.closest('.sheet');
-      closeSheet(sheet);
+      closeSheet(closer.closest('.sheet'));
+      return;
+    }
+
+    const confirmYes = event.target.closest('[data-confirm-yes]');
+    if (confirmYes) {
+      const action = state.confirmAction;
+      state.confirmAction = null;
+      state.confirmReturnProject = null;
+      hideSheet($('#confirmSheet'));
+      if (action) action();
       return;
     }
 
@@ -866,10 +1351,31 @@
       return;
     }
 
+    const remove = event.target.closest('[data-delete-project]');
+    if (remove) {
+      event.preventDefault();
+      const project = state.projects.find((item) => item.id === remove.dataset.deleteProject);
+      if (!project) return;
+      openConfirm({
+        title: 'Projeyi sil',
+        text: `"${project.title}" projesi ve bağlı tüm saha kayıtları silinecek. Bu işlem geri alınamaz.`,
+        confirmLabel: 'Sil',
+        danger: true,
+        returnProjectId: project.id,
+        onConfirm: () => deleteProject(project.id)
+      });
+      return;
+    }
+
     const trigger = event.target.closest('[data-project-id]');
     if (trigger && trigger.dataset.projectId) {
       event.preventDefault();
       openProjectSheet(trigger.dataset.projectId);
+      return;
+    }
+
+    if (event.target.closest('#featuredCard')) {
+      if (!$('#featuredCard').dataset.projectId) openProjectForm();
       return;
     }
 
@@ -913,12 +1419,24 @@
   const newProjectBtn = $('#newProjectBtn');
   if (newProjectBtn) newProjectBtn.addEventListener('click', () => openProjectForm());
 
+  const newRecordBtn = $('#newRecordBtn');
+  if (newRecordBtn) newRecordBtn.addEventListener('click', () => openRecordForm('work'));
+
+  const quickWork = $('#quickWork');
+  if (quickWork) quickWork.addEventListener('click', () => openRecordForm('work'));
+
+  const quickService = $('#quickService');
+  if (quickService) quickService.addEventListener('click', () => openRecordForm('service'));
+
+  const quickPhoto = $('#quickPhoto');
+  if (quickPhoto) quickPhoto.addEventListener('click', () => openRecordForm('photo'));
+
   const homeDetailBtn = $('#homeDetailBtn');
   if (homeDetailBtn) {
     homeDetailBtn.addEventListener('click', () => {
       const card = $('#featuredCard');
       if (card?.dataset.projectId) openProjectSheet(card.dataset.projectId);
-      else toast('Önce bir proje ekleyin.');
+      else openProjectForm();
     });
   }
 
@@ -933,6 +1451,48 @@
   const projectForm = $('#projectForm');
   if (projectForm) projectForm.addEventListener('submit', handleProjectSubmit);
 
+  const recordType = $('#recordType');
+  if (recordType) {
+    recordType.addEventListener('change', () => setRecordTypeDefaults(recordType.value));
+  }
+
+  const recordProject = $('#recordProject');
+  if (recordProject) {
+    recordProject.addEventListener('change', () => {
+      const project = state.projects.find((item) => item.id === recordProject.value);
+      const location = $('#recordLocation');
+      if (project && location && !location.value.trim()) location.value = project.location;
+    });
+  }
+
+  const recordPhotoInput = $('#recordPhoto');
+  if (recordPhotoInput) {
+    recordPhotoInput.addEventListener('change', async () => {
+      const file = recordPhotoInput.files && recordPhotoInput.files[0];
+      if (!file) return;
+      if (!file.type || !file.type.startsWith('image/')) {
+        showRecordFormError('Lütfen bir görsel seçin.');
+        recordPhotoInput.value = '';
+        return;
+      }
+
+      try {
+        state.pendingPhoto = await compressImage(file);
+        const preview = $('#recordPhotoPreview');
+        const image = $('#recordPhotoImg');
+        if (image) image.src = state.pendingPhoto;
+        if (preview) preview.hidden = false;
+      } catch (error) {
+        state.pendingPhoto = '';
+        recordPhotoInput.value = '';
+        showRecordFormError('Fotoğraf okunamadı. Tekrar deneyin.');
+      }
+    });
+  }
+
+  const recordForm = $('#recordForm');
+  if (recordForm) recordForm.addEventListener('submit', handleRecordSubmit);
+
   /* ---------------- Başlangıç ---------------- */
 
   function renderAll() {
@@ -943,6 +1503,7 @@
   }
 
   state.projects = loadProjects();
+  state.records = loadRecords();
   renderAll();
   renderRecords();
   syncFromHash();

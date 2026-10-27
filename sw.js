@@ -1,5 +1,5 @@
 /* AltyapıPro service worker — çevrimdışı kabuk */
-const CACHE = 'altyapipro-v2';
+const CACHE = 'altyapipro-v3';
 const SHELL = [
   './',
   './index.html',
