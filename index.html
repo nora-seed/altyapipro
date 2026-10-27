@@ -66,6 +66,7 @@
   <symbol id="i-arrow-up-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></symbol>
   <symbol id="i-sort" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h12M4 12h9M4 17h6M18 13v7M15 17l3 3 3-3"/></symbol>
   <symbol id="i-sliders" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></symbol>
 </svg>
 
 <div class="app">
@@ -91,29 +92,29 @@
     <!-- ============ ANA SAYFA ============ -->
     <section class="screen is-active" id="screen-home" aria-label="Ana Sayfa">
 
-      <article class="hero-card">
-        <img class="hero-thumb" src="assets/city.svg" alt="Merzifon İçme Suyu projesi">
+      <article class="hero-card" id="featuredCard" role="button" tabindex="0" aria-label="Aktif proje detayını aç">
+        <img class="hero-thumb" id="featuredThumb" src="assets/city.svg" alt="Merzifon İçme Suyu projesi">
         <div class="hero-info">
           <div class="hero-top">
-            <span class="eyebrow">Aktif Proje</span>
+            <span class="eyebrow" id="featuredEyebrow">Aktif Proje</span>
             <svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg>
           </div>
-          <h2 class="hero-title">Merzifon İçme Suyu</h2>
+          <h2 class="hero-title" id="featuredTitle">Merzifon İçme Suyu</h2>
           <div class="hero-meta">
-            <span><svg aria-hidden="true"><use href="#i-pin"/></svg>Merzifon, Amasya</span>
-            <span><svg aria-hidden="true"><use href="#i-layers"/></svg>İçme Suyu Hattı</span>
+            <span><svg aria-hidden="true"><use href="#i-pin"/></svg><span id="featuredLocation">Merzifon, Amasya</span></span>
+            <span><svg aria-hidden="true"><use href="#i-layers"/></svg><span id="featuredType">İçme Suyu Hattı</span></span>
           </div>
         </div>
       </article>
 
-      <div class="sync-bar">
+      <div class="sync-bar" id="syncBar">
         <span class="sync-dot" aria-hidden="true"></span>
         <div class="sync-text">
-          <strong>Veriler senkronize edildi</strong>
-          <small>Son eşitleme: Bugün 09:37</small>
+          <strong id="syncTitle">Veriler senkronize edildi</strong>
+          <small id="syncSub">Son eşitleme: Bugün 09:37</small>
         </div>
-        <button class="sync-pill" type="button" data-soon>
-          <svg aria-hidden="true"><use href="#i-wifi"/></svg>Çevrim içi
+        <button class="sync-pill" type="button" id="syncBtn" aria-label="Verileri şimdi eşitle">
+          <svg aria-hidden="true"><use href="#i-wifi"/></svg><span id="syncBtnText">Çevrim içi</span>
           <svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg>
         </button>
       </div>
@@ -128,8 +129,8 @@
           <div class="stat-icon tone-blue"><svg aria-hidden="true"><use href="#i-droplet"/></svg></div>
           <div class="stat-copy">
             <span class="stat-label">Bugün Döşenen Hat</span>
-            <strong class="stat-value">328 <small>m</small></strong>
-            <span class="stat-trend up"><svg aria-hidden="true"><use href="#i-arrow-up-right"/></svg>Dün: 245 m</span>
+            <strong class="stat-value"><span id="statLength">328</span> <small>m</small></strong>
+            <span class="stat-trend up"><svg aria-hidden="true"><use href="#i-arrow-up-right"/></svg><span id="statLengthPrev">Dün: 245 m</span></span>
           </div>
           <div class="spark tone-blue" aria-hidden="true"><i style="height:38%"></i><i style="height:62%"></i><i style="height:52%"></i><i style="height:88%"></i></div>
         </article>
@@ -138,8 +139,8 @@
           <div class="stat-icon tone-amber"><svg aria-hidden="true"><use href="#i-excavator"/></svg></div>
           <div class="stat-copy">
             <span class="stat-label">Açılan Kazı</span>
-            <strong class="stat-value">12 <small>adet</small></strong>
-            <span class="stat-trend up"><svg aria-hidden="true"><use href="#i-arrow-up-right"/></svg>Dün: 9 adet</span>
+            <strong class="stat-value"><span id="statExcavations">12</span> <small>adet</small></strong>
+            <span class="stat-trend up"><svg aria-hidden="true"><use href="#i-arrow-up-right"/></svg><span id="statExcavationsPrev">Dün: 9 adet</span></span>
           </div>
           <div class="spark tone-amber" aria-hidden="true"><i style="height:45%"></i><i style="height:70%"></i><i style="height:58%"></i><i style="height:92%"></i></div>
         </article>
@@ -148,8 +149,8 @@
           <div class="stat-icon tone-green"><svg aria-hidden="true"><use href="#i-users"/></svg></div>
           <div class="stat-copy">
             <span class="stat-label">Aktif Ekip</span>
-            <strong class="stat-value">3 <small>ekip</small></strong>
-            <span class="stat-sub">Toplam 14 personel</span>
+            <strong class="stat-value"><span id="statTeams">3</span> <small>ekip</small></strong>
+            <span class="stat-sub" id="statPersonnel">Toplam 14 personel</span>
           </div>
           <div class="spark tone-green" aria-hidden="true"><i style="height:55%"></i><i style="height:80%"></i><i style="height:40%"></i><i style="height:68%"></i></div>
         </article>
@@ -158,8 +159,8 @@
           <div class="stat-icon tone-purple"><svg aria-hidden="true"><use href="#i-clipboard"/></svg></div>
           <div class="stat-copy">
             <span class="stat-label">Bekleyen Onay</span>
-            <strong class="stat-value">8 <small>kayıt</small></strong>
-            <span class="stat-trend warn">3'ü bugün eklendi</span>
+            <strong class="stat-value"><span id="statPending">8</span> <small>kayıt</small></strong>
+            <span class="stat-trend warn" id="statPendingToday">3'ü bugün eklendi</span>
           </div>
           <div class="spark tone-purple" aria-hidden="true"><i style="height:34%"></i><i style="height:58%"></i><i style="height:46%"></i><i style="height:76%"></i></div>
         </article>
@@ -193,19 +194,19 @@
       <article class="progress-card">
         <div class="progress-head">
           <h3>Proje Tamamlanma Durumu</h3>
-          <span>%62</span>
+          <span id="homeProgressValue">%62</span>
         </div>
-        <div class="bar"><i style="width:62%"></i></div>
+        <div class="bar"><i id="homeProgressBar" style="width:62%"></i></div>
         <div class="progress-foot">
           <div class="progress-stat">
             <svg aria-hidden="true"><use href="#i-crosshair"/></svg>
-            <div><strong>12,4 km <span>/ 20 km</span></strong><small>Toplam hat uzunluğu</small></div>
+            <div><strong><span id="homeLength">12,4 km</span> <span>/ <span id="homeTotal">20 km</span></span></strong><small>Toplam hat uzunluğu</small></div>
           </div>
           <div class="progress-stat">
             <svg aria-hidden="true"><use href="#i-calendar"/></svg>
-            <div><strong>320 gün</strong><small>Kalan süre</small></div>
+            <div><strong id="homeDays">320 gün</strong><small>Kalan süre</small></div>
           </div>
-          <button class="ghost-btn" type="button" data-go="projects">Detaylar <svg aria-hidden="true"><use href="#i-chevron"/></svg></button>
+          <button class="ghost-btn" type="button" id="homeDetailBtn">Detaylar <svg aria-hidden="true"><use href="#i-chevron"/></svg></button>
         </div>
       </article>
 
@@ -214,32 +215,7 @@
         <a class="link" href="#records">Tümünü Gör <svg aria-hidden="true"><use href="#i-chevron"/></svg></a>
       </div>
 
-      <div class="recent-list">
-        <button class="recent-item" type="button" data-go="records">
-          <span class="record-icon tone-blue"><svg aria-hidden="true"><use href="#i-droplet"/></svg></span>
-          <span class="recent-main">
-            <span class="recent-top"><strong>İçme Suyu Hattı İmalatı</strong><span class="recent-time">Bugün 09:18</span><svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg></span>
-            <span class="recent-addr">Kuzey Mahallesi, 124. Sokak</span>
-            <span class="badge completed">Tamamlandı</span>
-          </span>
-        </button>
-        <button class="recent-item" type="button" data-go="records">
-          <span class="record-icon tone-amber"><svg aria-hidden="true"><use href="#i-excavator"/></svg></span>
-          <span class="recent-main">
-            <span class="recent-top"><strong>Kazı İşlemi</strong><span class="recent-time">Bugün 08:42</span><svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg></span>
-            <span class="recent-addr">Kuzey Mahallesi, 124. Sokak</span>
-            <span class="badge ongoing">Devam Ediyor</span>
-          </span>
-        </button>
-        <button class="recent-item" type="button" data-go="records">
-          <span class="record-icon tone-green"><svg aria-hidden="true"><use href="#i-users"/></svg></span>
-          <span class="recent-main">
-            <span class="recent-top"><strong>Abone Bağlantısı</strong><span class="recent-time">Dün 17:36</span><svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg></span>
-            <span class="recent-addr">A Blok / Daire 3</span>
-            <span class="badge pending">Onay Bekliyor</span>
-          </span>
-        </button>
-      </div>
+      <div class="recent-list" id="homeRecent"></div>
 
     </section>
 
@@ -249,7 +225,7 @@
         <div>
           <h1 class="page-title">Projeler</h1>
         </div>
-        <button class="btn btn-primary" type="button" data-soon>
+        <button class="btn btn-primary" type="button" id="newProjectBtn">
           <svg aria-hidden="true"><use href="#i-plus"/></svg>Yeni Proje
         </button>
       </div>
@@ -278,20 +254,28 @@
             <option>Yağmur Suyu Hattı</option>
             <option>Telekom Altyapısı</option>
           </select>
+          <span class="select-label" id="typeFilterLabel" aria-hidden="true">Tüm Türler</span>
           <svg aria-hidden="true"><use href="#i-chevron-down"/></svg>
         </label>
         <label class="select-wrap">
-          <select aria-label="İl">
-            <option>Tüm İller</option>
-            <option>Amasya</option>
-            <option>Tokat</option>
+          <select id="provinceFilter" aria-label="İl">
+            <option value="all">Tüm İller</option>
           </select>
+          <span class="select-label" id="provinceFilterLabel" aria-hidden="true">Tüm İller</span>
           <svg aria-hidden="true"><use href="#i-chevron-down"/></svg>
         </label>
-        <button class="sort-btn" type="button" data-soon>
-          <svg aria-hidden="true"><use href="#i-sort"/></svg>Varsayılan
+        <label class="sort-btn sort-select">
+          <svg aria-hidden="true"><use href="#i-sort"/></svg>
+          <span id="sortLabel">Varsayılan</span>
           <svg aria-hidden="true"><use href="#i-chevron-down"/></svg>
-        </button>
+          <select id="projectSort" aria-label="Proje sıralaması">
+            <option value="default">Varsayılan</option>
+            <option value="progress-desc">İlerleme: Yüksek</option>
+            <option value="progress-asc">İlerleme: Düşük</option>
+            <option value="days-asc">Kalan Süre: Az</option>
+            <option value="name-asc">İsim: A-Z</option>
+          </select>
+        </label>
       </div>
 
       <div class="project-list" id="projectList"></div>
@@ -611,6 +595,7 @@
             <option>01 Haz 2025 - 30 Haz 2025</option>
             <option>01 May 2025 - 31 May 2025</option>
           </select>
+          <span class="select-label" aria-hidden="true">01 Haz 2025 - 30 Haz 2025</span>
           <svg aria-hidden="true"><use href="#i-chevron-down"/></svg>
         </label>
         <label class="select-wrap has-lead">
@@ -620,6 +605,7 @@
             <option>Merzifon İçme Suyu</option>
             <option>Erbaa Kanalizasyon</option>
           </select>
+          <span class="select-label" aria-hidden="true">Tüm Projeler</span>
           <svg aria-hidden="true"><use href="#i-chevron-down"/></svg>
         </label>
       </div>
@@ -813,6 +799,110 @@
     </a>
   </nav>
 
+</div>
+
+
+<!-- ============ PROJE DETAY SHEET ============ -->
+<div class="sheet" id="projectSheet" hidden>
+  <div class="sheet-backdrop" data-close-project-sheet></div>
+  <section class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="projectSheetTitle">
+    <div class="sheet-grabber" aria-hidden="true"></div>
+    <header class="sheet-head">
+      <div>
+        <span class="sheet-eyebrow">Proje Detayı</span>
+        <h2 id="projectSheetTitle">Proje</h2>
+      </div>
+      <button class="icon-btn sheet-close" type="button" data-close-project-sheet aria-label="Kapat">
+        <svg aria-hidden="true"><use href="#i-x"/></svg>
+      </button>
+    </header>
+    <div class="sheet-body" id="projectSheetBody"></div>
+    <footer class="sheet-foot" id="projectSheetFoot"></footer>
+  </section>
+</div>
+
+<!-- ============ PROJE FORMU SHEET ============ -->
+<div class="sheet" id="projectFormSheet" hidden>
+  <div class="sheet-backdrop" data-close-project-form></div>
+  <section class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="projectFormTitle">
+    <div class="sheet-grabber" aria-hidden="true"></div>
+    <header class="sheet-head">
+      <div>
+        <span class="sheet-eyebrow">Proje Bilgileri</span>
+        <h2 id="projectFormTitle">Yeni Proje</h2>
+      </div>
+      <button class="icon-btn sheet-close" type="button" data-close-project-form aria-label="Kapat">
+        <svg aria-hidden="true"><use href="#i-x"/></svg>
+      </button>
+    </header>
+    <form class="sheet-body project-form" id="projectForm" novalidate>
+      <div class="form-grid">
+        <label class="field field-full">
+          <span>Proje adı</span>
+          <input class="field-input" id="projectName" name="title" type="text" placeholder="Örn. Merzifon İçme Suyu" required autocomplete="off">
+        </label>
+        <label class="field">
+          <span>Altyapı türü</span>
+          <select class="field-input" id="projectType" name="type">
+            <option>İçme Suyu Hattı</option>
+            <option>Kanalizasyon Hattı</option>
+            <option>Yağmur Suyu Hattı</option>
+            <option>Telekom Altyapısı</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Durum</span>
+          <select class="field-input" id="projectStatus" name="status">
+            <option value="ongoing">Devam Ediyor</option>
+            <option value="planned">Planlanıyor</option>
+            <option value="paused">Duraklatıldı</option>
+            <option value="completed">Tamamlandı</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>İl</span>
+          <input class="field-input" id="projectProvince" name="province" type="text" placeholder="Amasya" autocomplete="off">
+        </label>
+        <label class="field">
+          <span>İlçe</span>
+          <input class="field-input" id="projectDistrict" name="district" type="text" placeholder="Merzifon" autocomplete="off">
+        </label>
+        <label class="field field-full">
+          <span>Yüklenici</span>
+          <input class="field-input" id="projectContractor" name="contractor" type="text" placeholder="Firma adı" autocomplete="off">
+        </label>
+        <label class="field">
+          <span>Mevcut hat</span>
+          <input class="field-input" id="projectLength" name="length" type="text" placeholder="0 km" inputmode="decimal">
+        </label>
+        <label class="field">
+          <span>Toplam hat</span>
+          <input class="field-input" id="projectTotal" name="total" type="text" placeholder="0 km" inputmode="decimal">
+        </label>
+        <label class="field">
+          <span>Personel</span>
+          <input class="field-input" id="projectPersonnel" name="personnel" type="number" min="0" step="1" placeholder="0" inputmode="numeric">
+        </label>
+        <label class="field">
+          <span>Kalan süre (gün)</span>
+          <input class="field-input" id="projectDays" name="days" type="number" min="0" step="1" placeholder="0" inputmode="numeric">
+        </label>
+        <label class="field field-full">
+          <span>İlerleme: <b id="projectProgressValue">0</b>%</span>
+          <input class="field-range" id="projectProgress" name="progress" type="range" min="0" max="100" step="1" value="0">
+        </label>
+        <label class="field field-full">
+          <span>Açıklama</span>
+          <textarea class="field-input field-area" id="projectDescription" name="description" rows="3" placeholder="Proje hakkında kısa bilgi"></textarea>
+        </label>
+      </div>
+      <p class="form-error" id="projectFormError" role="alert" hidden></p>
+      <div class="form-actions">
+        <button class="btn btn-ghost" type="button" data-close-project-form>Vazgeç</button>
+        <button class="btn btn-primary" type="submit" id="projectFormSubmit">Projeyi Kaydet</button>
+      </div>
+    </form>
+  </section>
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
