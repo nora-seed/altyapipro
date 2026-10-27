@@ -47,6 +47,7 @@
   const state = {
     projects: [],
     records: [],
+    featuredId: null,
     projectStatus: 'all',
     projectType: 'all',
     projectProvince: 'all',
@@ -88,6 +89,44 @@
   const formatNumber = (value) =>
     new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 1 }).format(value);
 
+  function parseMeters(value, bareIsKm = false) {
+    const match = cleanText(value).toLocaleLowerCase('tr-TR').replace(',', '.').match(/([\d.]+)\s*(km|m)?/);
+    if (!match) return 0;
+    const amount = Number(match[1]);
+    if (!Number.isFinite(amount)) return 0;
+    if (match[2] === 'km') return amount * 1000;
+    if (match[2] === 'm') return amount;
+    return bareIsKm && amount <= 100 ? amount * 1000 : amount;
+  }
+
+  function formatMeters(meters) {
+    return meters >= 1000 ? `${formatNumber(meters / 1000)} km` : `${formatNumber(meters)} m`;
+  }
+
+  function projectWorkMeters(projectId) {
+    return state.records
+      .filter((record) => record.projectId === projectId && record.type === 'work')
+      .reduce((total, record) => total + record.meters, 0);
+  }
+
+  function applyAutoProgress() {
+    let changed = false;
+    state.projects = state.projects.map((project) => {
+      const totalMeters = parseMeters(project.total, true);
+      const workedMeters = projectWorkMeters(project.id);
+      if (totalMeters <= 0 || workedMeters <= 0) return project;
+
+      const length = formatMeters(workedMeters);
+      const progress = clamp(Math.round((workedMeters / totalMeters) * 100), 0, 100);
+      if (project.length === length && project.progress === progress && project.autoProgress) {
+        return project;
+      }
+      changed = true;
+      return { ...project, length, progress, autoProgress: true };
+    });
+    return changed;
+  }
+
   const statusInfo = (status) => STATUS[status] || STATUS.ongoing;
   const recordTypeInfo = (type) => RECORD_TYPES[type] || RECORD_TYPES.work;
   const recordStatusInfo = (status) => RECORD_STATUS[status] || RECORD_STATUS.completed;
@@ -121,7 +160,8 @@
       thumb: project.thumb || THUMBS[type] || 'assets/city.svg',
       contractor: cleanText(project.contractor) || 'Belirtilmedi',
       startDate: cleanText(project.startDate) || 'Belirtilmedi',
-      description: cleanText(project.description) || 'Açıklama eklenmedi.'
+      description: cleanText(project.description) || 'Açıklama eklenmedi.',
+      autoProgress: Boolean(project.autoProgress)
     };
   }
 
@@ -268,6 +308,7 @@
 
   function currentFeaturedProject() {
     return (
+      state.projects.find((project) => project.id === state.featuredId) ||
       state.projects.find((project) => project.status === 'ongoing') ||
       state.projects.find((project) => project.status === 'planned') ||
       state.projects[0] ||
@@ -295,6 +336,27 @@
       teams: teams.size,
       personnel: Array.from(teams.values()).reduce((total, value) => total + value, 0)
     };
+  }
+
+  function teamDetailsForDay(date = new Date()) {
+    const teams = new Map();
+    state.records
+      .filter((record) => isSameDay(new Date(record.createdAt), date) && record.team)
+      .forEach((record) => {
+        const current = teams.get(record.team) || {
+          name: record.team,
+          people: 0,
+          records: 0,
+          projectId: record.projectId
+        };
+        current.people = Math.max(current.people, record.people || 0);
+        current.records += 1;
+        current.projectId = record.projectId || current.projectId;
+        teams.set(record.team, current);
+      });
+    return Array.from(teams.values()).sort(
+      (a, b) => b.people - a.people || a.name.localeCompare(b.name, 'tr')
+    );
   }
 
   function markLocalChange() {
@@ -542,6 +604,174 @@
       .join('');
   }
 
+  function heroCard(project) {
+    return `
+      <article class="hero-card" role="button" tabindex="0" data-project-id="${esc(project.id)}" aria-label="${esc(project.title)} detayını aç">
+        <img class="hero-thumb" src="${esc(project.thumb)}" alt="${esc(project.title)}">
+        <div class="hero-info">
+          <div class="hero-top">
+            <span class="eyebrow">${esc(project.statusLabel)}</span>
+            ${icon('i-chevron', 'chev')}
+          </div>
+          <h2 class="hero-title">${esc(project.title)}</h2>
+          <div class="hero-meta">
+            <span>${icon('i-pin')}<span>${esc(project.location)}</span></span>
+            <span>${icon('i-layers')}<span>${esc(project.type)}</span></span>
+          </div>
+        </div>
+      </article>`;
+  }
+
+  function emptyHeroCard() {
+    return `
+      <article class="hero-card is-empty" data-empty-hero role="button" tabindex="0" aria-label="Yeni proje oluştur">
+        <img class="hero-thumb" src="assets/city.svg" alt="">
+        <div class="hero-info">
+          <div class="hero-top">
+            <span class="eyebrow">Başlangıç</span>
+            ${icon('i-chevron', 'chev')}
+          </div>
+          <h2 class="hero-title">İlk projeni oluştur</h2>
+          <div class="hero-meta">
+            <span>${icon('i-pin')}<span>Yeni proje eklemek için dokun</span></span>
+            <span>${icon('i-layers')}<span>Proje yok</span></span>
+          </div>
+        </div>
+      </article>`;
+  }
+
+  function updateHeroDots(activeIndex) {
+    $$('#heroDots .hero-dot').forEach((dot, index) => {
+      dot.classList.toggle('is-active', index === activeIndex);
+      dot.setAttribute('aria-current', index === activeIndex ? 'true' : 'false');
+    });
+  }
+
+  function scrollHeroTo(index, smooth = true) {
+    const track = $('#heroTrack');
+    const cards = $$('.hero-card[data-project-id]', track || document);
+    const target = cards[index];
+    if (!track || !target) return;
+    const left = Math.max(0, target.offsetLeft - 18);
+    if (typeof track.scrollTo === 'function') {
+      track.scrollTo({ left, behavior: smooth ? 'smooth' : 'auto' });
+    } else {
+      track.scrollLeft = left;
+    }
+  }
+
+  function selectedHeroIndex() {
+    return Math.max(0, state.projects.findIndex((project) => project.id === state.featuredId));
+  }
+
+  function renderHeroCarousel() {
+    const track = $('#heroTrack');
+    const dots = $('#heroDots');
+    if (!track) return;
+
+    if (!state.projects.length) {
+      state.featuredId = null;
+      track.innerHTML = emptyHeroCard();
+      if (dots) {
+        dots.innerHTML = '';
+        dots.hidden = true;
+      }
+      return;
+    }
+
+    const featured = currentFeaturedProject();
+    state.featuredId = featured ? featured.id : null;
+    const index = selectedHeroIndex();
+
+    track.innerHTML = state.projects.map(heroCard).join('');
+    if (dots) {
+      dots.hidden = state.projects.length < 2;
+      dots.innerHTML = state.projects
+        .map(
+          (project, dotIndex) =>
+            `<button class="hero-dot${dotIndex === index ? ' is-active' : ''}" type="button" data-hero-index="${dotIndex}" aria-label="${esc(project.title)} projesini göster" aria-current="${dotIndex === index ? 'true' : 'false'}"></button>`
+        )
+        .join('');
+    }
+
+    window.requestAnimationFrame(() => {
+      if (index > 0) scrollHeroTo(index, false);
+      updateHeroDots(index);
+    });
+  }
+
+  function updateFeaturedPanels(featured) {
+    const progressCard = $('#homeProgressCard');
+    const setText = (selector, value) => {
+      const el = $(selector);
+      if (el) el.textContent = value;
+    };
+
+    if (!featured) {
+      setText('#homeProgressValue', '%0');
+      const bar = $('#homeProgressBar');
+      if (bar) bar.style.width = '0%';
+      setText('#homeLength', '0 m');
+      setText('#homeTotal', '0 m');
+      setText('#homeDays', '0 gün');
+      if (progressCard) progressCard.hidden = true;
+      renderMapActive(null);
+      return;
+    }
+
+    setText('#homeProgressValue', `%${featured.progress}`);
+    setText('#homeLength', featured.length);
+    setText('#homeTotal', featured.total);
+    setText('#homeDays', `${featured.days} gün`);
+    const bar = $('#homeProgressBar');
+    if (bar) bar.style.width = `${featured.progress}%`;
+    if (progressCard) progressCard.hidden = false;
+    renderMapActive(featured);
+  }
+
+  function renderTeamScroller() {
+    const head = $('#teamHead');
+    const wrap = $('#teamScroll');
+    const sub = $('#teamSub');
+    if (!head || !wrap) return;
+
+    const teams = teamDetailsForDay();
+    if (!teams.length) {
+      head.hidden = true;
+      wrap.hidden = true;
+      wrap.innerHTML = '';
+      return;
+    }
+
+    const totalPeople = teams.reduce((total, team) => total + team.people, 0);
+    head.hidden = false;
+    wrap.hidden = false;
+    if (sub) sub.textContent = `${teams.length} ekip`;
+
+    wrap.innerHTML =
+      teams
+        .map(
+          (team) => `
+          <button class="team-card" type="button" data-project-id="${esc(team.projectId)}">
+            <span class="team-card-top">
+              <span class="stat-icon tone-green">${icon('i-users')}</span>
+              <span class="team-people">${esc(team.people)}<small> kişi</small></span>
+            </span>
+            <strong>${esc(team.name)}</strong>
+            <small>${esc(team.records)} saha kaydı</small>
+          </button>`
+        )
+        .join('') +
+      `<div class="team-card is-total">
+        <span class="team-card-top">
+          <span class="stat-icon">${icon('i-users')}</span>
+          <span class="team-people">${esc(totalPeople)}<small> kişi</small></span>
+        </span>
+        <strong>Toplam Personel</strong>
+        <small>Bugün sahada</small>
+      </div>`;
+  }
+
   function renderHome() {
     const today = summaryForDay(new Date());
     const yesterdayDate = new Date();
@@ -574,55 +804,11 @@
           : 'Onay bekleyen kayıt yok'
     );
 
+    renderHeroCarousel();
     const featured = currentFeaturedProject();
-    const featuredCard = $('#featuredCard');
-    const featuredThumb = $('#featuredThumb');
-    const progressCard = $('#homeProgressCard');
-
-    if (!featured) {
-      if (featuredCard) {
-        featuredCard.removeAttribute('data-project-id');
-        featuredCard.setAttribute('aria-label', 'Yeni proje oluştur');
-      }
-      if (featuredThumb) {
-        featuredThumb.src = 'assets/city.svg';
-        featuredThumb.alt = '';
-      }
-      setText('#featuredEyebrow', 'Başlangıç');
-      setText('#featuredTitle', 'İlk projeni oluştur');
-      setText('#featuredLocation', 'Yeni proje eklemek için dokun');
-      setText('#featuredType', 'Proje yok');
-      setText('#homeProgressValue', '%0');
-      const bar = $('#homeProgressBar');
-      if (bar) bar.style.width = '0%';
-      setText('#homeLength', '0 km');
-      setText('#homeTotal', '0 km');
-      setText('#homeDays', '0 gün');
-      if (progressCard) progressCard.hidden = true;
-    } else {
-      if (featuredCard) {
-        featuredCard.dataset.projectId = featured.id;
-        featuredCard.setAttribute('aria-label', `${featured.title} detayını aç`);
-      }
-      if (featuredThumb) {
-        featuredThumb.src = featured.thumb;
-        featuredThumb.alt = `${featured.title} projesi`;
-      }
-      setText('#featuredEyebrow', featured.statusLabel);
-      setText('#featuredTitle', featured.title);
-      setText('#featuredLocation', featured.location);
-      setText('#featuredType', featured.type);
-      setText('#homeProgressValue', `%${featured.progress}`);
-      setText('#homeLength', featured.length);
-      setText('#homeTotal', featured.total);
-      setText('#homeDays', `${featured.days} gün`);
-      const bar = $('#homeProgressBar');
-      if (bar) bar.style.width = `${featured.progress}%`;
-      if (progressCard) progressCard.hidden = false;
-    }
-
+    updateFeaturedPanels(featured);
+    renderTeamScroller();
     renderRecentHome();
-    renderMapActive(featured);
   }
 
   function renderMapActive(featured = currentFeaturedProject()) {
@@ -768,6 +954,7 @@
       <div class="detail-progress">
         <div class="detail-progress-head"><span>Fiziki gerçekleşme</span><b>%${esc(project.progress)}</b></div>
         <div class="bar"><i style="width:${project.progress}%"></i></div>
+        ${project.autoProgress ? '<small class="auto-progress-note">İmalat kayıtlarından otomatik hesaplandı.</small>' : ''}
       </div>
       <div class="detail-section">
         <h3>Açıklama</h3>
@@ -820,6 +1007,7 @@
 
     state.projects = state.projects.filter((item) => item.id !== projectId);
     state.records = state.records.filter((record) => record.projectId !== projectId);
+    applyAutoProgress();
     saveProjects();
     saveRecords();
     renderAll();
@@ -948,8 +1136,10 @@
       );
     } else {
       state.projects = [saved, ...state.projects];
+      state.featuredId = saved.id;
     }
 
+    applyAutoProgress();
     const persisted = saveProjects();
     renderAll();
     renderRecords();
@@ -1123,6 +1313,7 @@
     );
 
     state.records = [record, ...state.records];
+    if (applyAutoProgress()) saveProjects();
     let persisted = saveRecords();
     let photoDropped = false;
 
@@ -1367,15 +1558,17 @@
       return;
     }
 
+    const emptyHero = event.target.closest('[data-empty-hero]');
+    if (emptyHero) {
+      event.preventDefault();
+      openProjectForm();
+      return;
+    }
+
     const trigger = event.target.closest('[data-project-id]');
     if (trigger && trigger.dataset.projectId) {
       event.preventDefault();
       openProjectSheet(trigger.dataset.projectId);
-      return;
-    }
-
-    if (event.target.closest('#featuredCard')) {
-      if (!$('#featuredCard').dataset.projectId) openProjectForm();
       return;
     }
 
@@ -1397,6 +1590,11 @@
     }
 
     if (event.key !== 'Enter' && event.key !== ' ') return;
+    if (event.target.closest('[data-empty-hero]')) {
+      event.preventDefault();
+      openProjectForm();
+      return;
+    }
     const trigger = event.target.closest('[data-project-id]');
     if (!trigger || trigger.tagName === 'BUTTON' || trigger.tagName === 'A') return;
     if (trigger.dataset.projectId) {
@@ -1416,6 +1614,50 @@
     if (select.id === 'projectSort') syncSelectLabels();
   });
 
+  const heroDots = $('#heroDots');
+  if (heroDots) {
+    heroDots.addEventListener('click', (event) => {
+      const dot = event.target.closest('[data-hero-index]');
+      if (!dot) return;
+      const index = Number(dot.dataset.heroIndex);
+      const project = state.projects[index];
+      if (!project) return;
+      state.featuredId = project.id;
+      updateHeroDots(index);
+      updateFeaturedPanels(project);
+      scrollHeroTo(index);
+    });
+  }
+
+  const heroTrack = $('#heroTrack');
+  if (heroTrack) {
+    let heroScrollFrame = 0;
+    heroTrack.addEventListener('scroll', () => {
+      if (heroScrollFrame) window.cancelAnimationFrame(heroScrollFrame);
+      heroScrollFrame = window.requestAnimationFrame(() => {
+        const cards = $$('.hero-card[data-project-id]', heroTrack);
+        if (!cards.length) return;
+
+        let closestIndex = 0;
+        let closestDistance = Infinity;
+        cards.forEach((card, index) => {
+          const distance = Math.abs(card.offsetLeft - (heroTrack.scrollLeft + 18));
+          if (distance < closestDistance) {
+            closestDistance = distance;
+            closestIndex = index;
+          }
+        });
+
+        const projectId = cards[closestIndex].dataset.projectId;
+        if (!projectId || projectId === state.featuredId) return;
+        const project = state.projects.find((item) => item.id === projectId) || null;
+        state.featuredId = projectId;
+        updateHeroDots(closestIndex);
+        updateFeaturedPanels(project);
+      });
+    });
+  }
+
   const newProjectBtn = $('#newProjectBtn');
   if (newProjectBtn) newProjectBtn.addEventListener('click', () => openProjectForm());
 
@@ -1434,8 +1676,7 @@
   const homeDetailBtn = $('#homeDetailBtn');
   if (homeDetailBtn) {
     homeDetailBtn.addEventListener('click', () => {
-      const card = $('#featuredCard');
-      if (card?.dataset.projectId) openProjectSheet(card.dataset.projectId);
+      if (state.featuredId) openProjectSheet(state.featuredId);
       else openProjectForm();
     });
   }
@@ -1504,6 +1745,7 @@
 
   state.projects = loadProjects();
   state.records = loadRecords();
+  if (applyAutoProgress()) saveProjects();
   renderAll();
   renderRecords();
   syncFromHash();

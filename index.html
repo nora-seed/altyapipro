@@ -93,20 +93,25 @@
     <!-- ============ ANA SAYFA ============ -->
     <section class="screen is-active" id="screen-home" aria-label="Ana Sayfa">
 
-      <article class="hero-card" id="featuredCard" role="button" tabindex="0" aria-label="Yeni proje oluştur">
-        <img class="hero-thumb" id="featuredThumb" src="assets/city.svg" alt="">
-        <div class="hero-info">
-          <div class="hero-top">
-            <span class="eyebrow" id="featuredEyebrow">Başlangıç</span>
-            <svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg>
-          </div>
-          <h2 class="hero-title" id="featuredTitle">İlk projeni oluştur</h2>
-          <div class="hero-meta">
-            <span><svg aria-hidden="true"><use href="#i-pin"/></svg><span id="featuredLocation">Yeni proje eklemek için dokun</span></span>
-            <span><svg aria-hidden="true"><use href="#i-layers"/></svg><span id="featuredType">Proje yok</span></span>
-          </div>
+      <div class="hero-carousel" id="heroCarousel">
+        <div class="hero-track" id="heroTrack" aria-label="Projeler arasında kaydır">
+          <article class="hero-card is-empty" data-empty-hero role="button" tabindex="0" aria-label="Yeni proje oluştur">
+            <img class="hero-thumb" src="assets/city.svg" alt="">
+            <div class="hero-info">
+              <div class="hero-top">
+                <span class="eyebrow">Başlangıç</span>
+                <svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg>
+              </div>
+              <h2 class="hero-title">İlk projeni oluştur</h2>
+              <div class="hero-meta">
+                <span><svg aria-hidden="true"><use href="#i-pin"/></svg><span>Yeni proje eklemek için dokun</span></span>
+                <span><svg aria-hidden="true"><use href="#i-layers"/></svg><span>Proje yok</span></span>
+              </div>
+            </div>
+          </article>
         </div>
-      </article>
+      </div>
+      <div class="hero-dots" id="heroDots" hidden></div>
 
       <div class="sync-bar" id="syncBar">
         <span class="sync-dot" aria-hidden="true"></span>
@@ -166,6 +171,12 @@
           <div class="spark tone-purple" aria-hidden="true"><i style="height:34%"></i><i style="height:58%"></i><i style="height:46%"></i><i style="height:76%"></i></div>
         </article>
       </div>
+
+      <div class="section-head" id="teamHead" hidden>
+        <h2>Aktif Ekipler</h2>
+        <span class="link" id="teamSub">0 ekip</span>
+      </div>
+      <div class="team-scroll" id="teamScroll" hidden></div>
 
       <div class="section-head"><h2>Hızlı İşlemler</h2></div>
 
@@ -708,6 +719,7 @@
         <label class="field field-full">
           <span>İlerleme: <b id="projectProgressValue">0</b>%</span>
           <input class="field-range" id="projectProgress" name="progress" type="range" min="0" max="100" step="1" value="0">
+          <small class="field-hint">İmalat kaydına metre girildikçe ilerleme otomatik hesaplanır.</small>
         </label>
         <label class="field field-full">
           <span>Açıklama</span>
