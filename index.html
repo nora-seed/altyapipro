@@ -85,7 +85,7 @@
       <button class="icon-btn bell" type="button" data-soon aria-label="Bildirimler">
         <svg><use href="#i-bell"/></svg><span class="notif-dot"></span>
       </button>
-      <button class="avatar" type="button" data-soon aria-label="Profil">MK</button>
+      <button class="avatar" type="button" id="profileBtn" aria-label="Hesap ve çıkış">?</button>
     </div>
   </header>
 
@@ -238,7 +238,7 @@
         <div>
           <h1 class="page-title">Projeler</h1>
         </div>
-        <button class="btn btn-primary" type="button" id="newProjectBtn">
+        <button class="btn btn-primary" type="button" id="newProjectBtn" data-admin-only>
           <svg aria-hidden="true"><use href="#i-plus"/></svg>Yeni Proje
         </button>
       </div>
@@ -330,7 +330,7 @@
           <span class="map-empty-icon"><svg aria-hidden="true"><use href="#i-map"/></svg></span>
           <strong id="mapEmptyTitle">Henüz proje yok</strong>
           <p id="mapEmptyText">Haritada görmek için önce proje ekleyin.</p>
-          <button class="btn btn-primary btn-sm" type="button" data-empty-map-project id="mapEmptyAction">Proje Ekle</button>
+          <button class="btn btn-primary btn-sm" type="button" data-empty-map-project id="mapEmptyAction" data-admin-only>Proje Ekle</button>
         </div>
 
         <div class="map-tools">
@@ -415,6 +415,14 @@
         <button class="chip" type="button" data-type="other">Diğer</button>
       </div>
 
+      <section class="approval-queue" id="approvalPanel" hidden>
+        <div class="approval-queue-head">
+          <h2>Onay Bekleyen İşlemler</h2>
+          <span class="badge pending" id="approvalQueueCount">0</span>
+        </div>
+        <div class="approval-queue-list" id="approvalQueue"></div>
+      </section>
+
       <div id="recordGroups"></div>
       <div class="empty-state" id="recordEmpty" hidden>
         <svg aria-hidden="true"><use href="#i-search"/></svg>
@@ -430,7 +438,7 @@
           <h1 class="page-title">Raporlar</h1>
           <p class="page-sub">Projelerinizin performansını analiz edin.</p>
         </div>
-        <button class="btn btn-outline" type="button" id="reportExportBtn">
+        <button class="btn btn-outline" type="button" id="reportExportBtn" data-admin-only>
           <svg aria-hidden="true"><use href="#i-download"/></svg>Rapor Dışa Aktar
         </button>
       </div>
@@ -695,6 +703,7 @@
       </button>
     </header>
     <form class="sheet-body project-form" id="recordForm" novalidate>
+      <p class="form-note" id="recordApprovalNote" hidden>Girdiğiniz kayıt yöneticinin onayına gönderilecek. Onaylanana kadar proje verilerine işlenmez.</p>
       <div class="form-grid">
         <label class="field field-full">
           <span>Proje</span>
@@ -715,7 +724,7 @@
           <select class="field-input" id="recordStatus" name="status">
             <option value="completed">Tamamlandı</option>
             <option value="ongoing">Devam Ediyor</option>
-            <option value="pending">Onay Bekliyor</option>
+            <option value="pending">Beklemede</option>
             <option value="error">Sorun Var</option>
           </select>
         </label>
@@ -828,6 +837,47 @@
       <button class="btn btn-danger" type="button" id="confirmYes" data-confirm-yes>Sil</button>
     </div>
   </section>
+</div>
+
+<!-- ============ GİRİŞ EKRANI ============ -->
+<div class="auth-screen" id="authScreen">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <svg class="auth-logo" aria-hidden="true"><use href="#logo"/></svg>
+      <div><strong>Altyapı<span>Pro</span></strong><small>Saha yönetim sistemi</small></div>
+    </div>
+
+    <div class="auth-copy">
+      <span class="sheet-eyebrow">Güvenli Giriş</span>
+      <h1>Nasıl devam etmek istersiniz?</h1>
+      <p>Yetkinize uygun giriş türünü seçin.</p>
+    </div>
+
+    <div class="auth-role-grid" id="authRoleGrid">
+      <button class="auth-role" type="button" data-auth-role="admin">
+        <span class="auth-role-icon tone-blue"><svg aria-hidden="true"><use href="#i-users"/></svg></span>
+        <span><strong>Yönetici Girişi</strong><small>Tüm proje, onay ve rapor yetkileri</small></span>
+        <svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg>
+      </button>
+      <button class="auth-role" type="button" data-auth-role="personel">
+        <span class="auth-role-icon tone-green"><svg aria-hidden="true"><use href="#i-clipboard"/></svg></span>
+        <span><strong>Personel Girişi</strong><small>Yalnızca saha verisi girişi</small></span>
+        <svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg>
+      </button>
+    </div>
+
+    <form class="auth-pin-form" id="authPinForm" hidden novalidate>
+      <button class="auth-back" type="button" data-auth-back><svg aria-hidden="true"><use href="#i-chevron"/></svg>Geri</button>
+      <h2 id="authPinTitle">Yönetici Girişi</h2>
+      <p id="authPinHint">4 haneli yönetici PIN kodunu girin.</p>
+      <label class="auth-pin-field">
+        <span>PIN kodu</span>
+        <input id="authPin" type="password" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" autocomplete="off" placeholder="••••">
+      </label>
+      <p class="form-error" id="authPinError" role="alert" hidden></p>
+      <button class="btn btn-primary auth-submit" type="submit">Giriş Yap</button>
+    </form>
+  </div>
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>

@@ -1161,6 +1161,10 @@ input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; }
 .side-top time { font-size: 9.5px; color: var(--muted); white-space: nowrap; }
 .side-top .chev { width: 12px; height: 12px; color: var(--muted-2); }
 .record-side .badge { font-size: 9px; align-self: flex-end; }
+.record-side .badge + .badge { margin-top: 3px; }
+.detail-record-main .approval-line { color: var(--muted); font-weight: 700; }
+.detail-record-main .approval-line.is-pending { color: #a26a00; }
+.detail-record-main .approval-line.is-rejected { color: #c02626; }
 
 /* ---------------- Reports ---------------- */
 
@@ -1394,6 +1398,138 @@ input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; }
 .report-project-progress b { font-size: 8.5px; color: #5f7189; }
 .approval-list .report-empty-line { padding: 10px 0 4px; }
 .approval-list .pending-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------------- Giriş ve yetki ---------------- */
+
+body.auth-locked { overflow: hidden; }
+body[data-role="personel"] [data-admin-only],
+[data-admin-only][hidden] { display: none !important; }
+.form-error[hidden] { display: none; }
+.auth-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 260;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  overflow-y: auto;
+  background:
+    radial-gradient(circle at 15% 10%, rgba(31, 111, 240, 0.16), transparent 38%),
+    radial-gradient(circle at 88% 92%, rgba(23, 163, 74, 0.13), transparent 34%),
+    #eef5fd;
+}
+.auth-screen[hidden] { display: none; }
+.auth-card {
+  width: min(100%, 360px);
+  padding: 22px 18px 20px;
+  border: 1px solid rgba(207, 224, 247, 0.8);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 24px 60px rgba(11, 42, 75, 0.16);
+}
+.auth-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; }
+.auth-logo { width: 38px; height: 38px; color: var(--blue); }
+.auth-brand strong { display: block; font-size: 16px; font-weight: 800; letter-spacing: -0.4px; }
+.auth-brand strong span { color: var(--blue); }
+.auth-brand small { display: block; margin-top: 1px; font-size: 9px; color: var(--muted); }
+.auth-copy { margin-bottom: 16px; }
+.auth-copy h1 { margin: 3px 0 5px; font-size: 20px; line-height: 1.15; letter-spacing: -0.5px; }
+.auth-copy p, .auth-pin-form > p { margin: 0; font-size: 10.5px; color: var(--muted); }
+.auth-role-grid { display: flex; flex-direction: column; gap: 9px; }
+.auth-role {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 11px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+  color: var(--ink);
+  text-align: left;
+  font-family: inherit;
+  box-shadow: var(--shadow);
+}
+.auth-role:active { background: #f5f9ff; border-color: #b9d3f7; }
+.auth-role > span:nth-child(2) { min-width: 0; flex: 1; }
+.auth-role strong { display: block; font-size: 12px; font-weight: 800; }
+.auth-role small { display: block; margin-top: 2px; font-size: 9px; color: var(--muted); }
+.auth-role-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; flex: none; background: var(--tone-soft); color: var(--tone); }
+.auth-role-icon svg { width: 18px; height: 18px; }
+.auth-role .chev { width: 13px; height: 13px; color: var(--muted-2); flex: none; }
+.auth-pin-form { display: flex; flex-direction: column; gap: 11px; }
+.auth-pin-form[hidden], .auth-role-grid[hidden] { display: none; }
+.auth-pin-form h2 { margin: 0; font-size: 17px; letter-spacing: -0.4px; }
+.auth-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
+}
+.auth-back svg { width: 12px; height: 12px; transform: rotate(180deg); }
+.auth-pin-field { display: flex; flex-direction: column; gap: 5px; }
+.auth-pin-field span { font-size: 9.5px; font-weight: 700; color: #5f7189; }
+.auth-pin-field input {
+  width: 100%;
+  height: 50px;
+  border: 1px solid var(--line-2);
+  border-radius: 14px;
+  background: #f8fbff;
+  color: var(--ink);
+  text-align: center;
+  font-family: inherit;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 8px;
+}
+.auth-pin-field input:focus { outline: 2px solid rgba(31, 111, 240, 0.25); border-color: var(--blue); }
+.auth-submit { width: 100%; margin-top: 2px; }
+.form-note {
+  margin: 0 0 12px;
+  padding: 10px 11px;
+  border: 1px solid #f3dfb0;
+  border-radius: 12px;
+  background: #fffaed;
+  color: #8a650c;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+/* ---------------- Onay kuyruğu ---------------- */
+
+.approval-queue {
+  margin: 2px 0 12px;
+  padding: 12px;
+  border: 1px solid #f3dfb0;
+  border-radius: 16px;
+  background: #fffaf0;
+}
+.approval-queue[hidden] { display: none; }
+.approval-queue-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 7px; }
+.approval-queue-head h2 { margin: 0; font-size: 12px; font-weight: 800; letter-spacing: -0.2px; }
+.approval-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 5px 8px;
+  padding: 9px 0;
+  border-top: 1px solid #f3e7c8;
+}
+.approval-item-main { min-width: 0; }
+.approval-item-title { display: block; font-size: 10.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.approval-item-meta { display: flex; flex-wrap: wrap; gap: 3px 8px; margin-top: 2px; font-size: 8.5px; color: #8a7a58; }
+.approval-item-meta b { color: #6c5b34; }
+.approval-actions { display: flex; align-items: center; gap: 5px; }
+.approval-actions .btn { height: 30px; padding: 0 9px; border-radius: 9px; font-size: 9px; }
+.approval-actions .btn-primary { box-shadow: none; }
+.approval-actions .btn-danger { box-shadow: none; }
 
 /* ---------------- Bottom nav ---------------- */
 

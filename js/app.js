@@ -13,7 +13,8 @@
     projects: 'altyapipro.projects.v2',
     records: 'altyapipro.records.v1',
     lastChange: 'altyapipro.lastChange.v1',
-    location: 'altyapipro.location.v1'
+    location: 'altyapipro.location.v1',
+    session: 'altyapipro.session.v1'
   };
 
   const STATUS = {
@@ -38,6 +39,23 @@
     Antalya: ['Muratpaşa', 'Kepez']
   };
 
+  const AUTH_ROLES = {
+    admin: {
+      label: 'Yönetici',
+      name: 'Yönetici',
+      pin: '1234',
+      title: 'Yönetici Girişi',
+      hint: '4 haneli yönetici PIN kodunu girin.'
+    },
+    personel: {
+      label: 'Personel',
+      name: 'Saha Personeli',
+      pin: '0000',
+      title: 'Personel Girişi',
+      hint: '4 haneli personel PIN kodunu girin.'
+    }
+  };
+
   const RECORD_TYPES = {
     work: { label: 'İmalat', tone: 'blue', icon: 'i-waves', defaultTitle: 'Saha İmalatı' },
     service: { label: 'Abone Bağlantısı', tone: 'green', icon: 'i-users', defaultTitle: 'Abone Bağlantısı' },
@@ -49,8 +67,14 @@
   const RECORD_STATUS = {
     completed: { label: 'Tamamlandı', className: 'completed' },
     ongoing: { label: 'Devam Ediyor', className: 'ongoing' },
-    pending: { label: 'Onay Bekliyor', className: 'pending' },
+    pending: { label: 'Beklemede', className: 'pending' },
     error: { label: 'Sorun Var', className: 'error' }
+  };
+
+  const APPROVAL_STATUS = {
+    pending: { label: 'Onay Bekliyor', className: 'pending' },
+    approved: { label: 'Onaylandı', className: 'completed' },
+    rejected: { label: 'Reddedildi', className: 'error' }
   };
 
   const REPORT_PERIODS = {
@@ -93,6 +117,8 @@
   };
 
   const state = {
+    role: null,
+    authRole: null,
     projects: [],
     records: [],
     featuredId: null,
@@ -132,6 +158,10 @@
   let tileErrorShown = false;
   const projectMarkers = new Map();
   const recordMarkers = new Map();
+
+  function isAdmin() {
+    return state.role === 'admin';
+  }
 
   const esc = (value) =>
     String(value == null ? '' : value)
@@ -270,7 +300,12 @@
 
   function projectWorkMeters(projectId) {
     return state.records
-      .filter((record) => record.projectId === projectId && record.type === 'work')
+      .filter(
+        (record) =>
+          record.projectId === projectId &&
+          record.type === 'work' &&
+          record.approvalStatus === 'approved'
+      )
       .reduce((total, record) => total + record.meters, 0);
   }
 
@@ -295,6 +330,7 @@
   const statusInfo = (status) => STATUS[status] || STATUS.ongoing;
   const recordTypeInfo = (type) => RECORD_TYPES[type] || RECORD_TYPES.work;
   const recordStatusInfo = (status) => RECORD_STATUS[status] || RECORD_STATUS.completed;
+  const approvalInfo = (status) => APPROVAL_STATUS[status] || APPROVAL_STATUS.approved;
 
   function normalizeProject(project, index) {
     project = project || {};
@@ -340,6 +376,15 @@
     const statusInfoValue = recordStatusInfo(status);
     const created = new Date(record.createdAt);
     const createdAt = Number.isNaN(created.getTime()) ? new Date().toISOString() : created.toISOString();
+    const approvalStatus = APPROVAL_STATUS[record.approvalStatus]
+      ? record.approvalStatus
+      : record.status === 'pending'
+        ? 'pending'
+        : 'approved';
+    const approval = approvalInfo(approvalStatus);
+    const reviewedDate = new Date(record.reviewedAt);
+    const reviewedAt = Number.isNaN(reviewedDate.getTime()) ? '' : reviewedDate.toISOString();
+    const createdByRole = record.createdByRole === 'personel' ? 'personel' : 'admin';
     const width = Math.max(0, decimal(record.width, 0));
     const depth = Math.max(0, decimal(record.depth, 0));
     const length = Math.max(0, decimal(record.length, 0));
@@ -368,6 +413,14 @@
       status,
       statusLabel: statusInfoValue.label,
       statusClass: statusInfoValue.className,
+      approvalStatus,
+      approvalLabel: approval.label,
+      approvalClass: approval.className,
+      createdByRole,
+      createdByName:
+        cleanText(record.createdByName) || AUTH_ROLES[createdByRole].name,
+      reviewedAt,
+      reviewedBy: cleanText(record.reviewedBy),
       tone: typeInfo.tone,
       icon: typeInfo.icon,
       note: cleanText(record.note),
@@ -430,12 +483,45 @@
     }
   }
 
+  function removeStorage(key) {
+    try {
+      window.localStorage.removeItem(key);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
   function saveProjects() {
     return writeStorage(STORAGE.projects, JSON.stringify(state.projects));
   }
 
   function saveRecords() {
     return writeStorage(STORAGE.records, JSON.stringify(state.records));
+  }
+
+  function loadSessionRole() {
+    const saved = readStorage(STORAGE.session);
+    if (!saved) return null;
+    try {
+      const parsed = JSON.parse(saved);
+      const role = typeof parsed === 'string' ? parsed : parsed && parsed.role;
+      return AUTH_ROLES[role] ? role : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function saveSessionRole(role) {
+    if (!AUTH_ROLES[role]) return false;
+    return writeStorage(
+      STORAGE.session,
+      JSON.stringify({ role, loggedInAt: new Date().toISOString() })
+    );
+  }
+
+  function clearSessionRole() {
+    return removeStorage(STORAGE.session);
   }
 
   function startOfDay(date) {
@@ -501,7 +587,11 @@
   }
 
   function summaryForDay(date) {
-    const list = state.records.filter((record) => isSameDay(new Date(record.createdAt), date));
+    const list = state.records.filter(
+      (record) =>
+        record.approvalStatus === 'approved' &&
+        isSameDay(new Date(record.createdAt), date)
+    );
     const length = list
       .filter((record) => record.type === 'work')
       .reduce((total, record) => total + record.meters, 0);
@@ -529,7 +619,12 @@
   function teamDetailsForDay(date = new Date()) {
     const teams = new Map();
     state.records
-      .filter((record) => isSameDay(new Date(record.createdAt), date) && record.team)
+      .filter(
+        (record) =>
+          record.approvalStatus === 'approved' &&
+          isSameDay(new Date(record.createdAt), date) &&
+          record.team
+      )
       .forEach((record) => {
         const current = teams.get(record.team) || {
           name: record.team,
@@ -741,7 +836,11 @@
       const copy = empty.querySelector('p');
       if (!state.projects.length) {
         if (strong) strong.textContent = 'Henüz proje yok';
-        if (copy) copy.textContent = 'Yeni Proje ile ilk projenizi oluşturun.';
+        if (copy) {
+          copy.textContent = isAdmin()
+            ? 'Yeni Proje ile ilk projenizi oluşturun.'
+            : 'Proje eklemek için yönetici girişi gerekir.';
+        }
       } else {
         if (strong) strong.textContent = 'Proje bulunamadı';
         if (copy) copy.textContent = 'Arama veya filtreleri değiştirerek tekrar deneyin.';
@@ -826,7 +925,7 @@
             </span>
             <span class="recent-addr">${esc(record.location)}</span>
             ${record.type === 'dig' ? `<span class="recent-volume">${formatVolume(record.volume)} m³ kazı</span>` : ''}
-            <span class="badge ${esc(record.statusClass)}">${esc(record.statusLabel)}</span>
+            <span class="badge ${esc(record.approvalStatus === 'approved' ? record.statusClass : record.approvalClass)}">${esc(record.approvalStatus === 'approved' ? record.statusLabel : record.approvalLabel)}</span>
           </span>
         </button>`
       )
@@ -852,17 +951,18 @@
   }
 
   function emptyHeroCard() {
+    const canCreate = isAdmin();
     return `
-      <article class="hero-card is-empty" data-empty-hero role="button" tabindex="0" aria-label="Yeni proje oluştur">
+      <article class="hero-card is-empty"${canCreate ? ' data-empty-hero role="button" tabindex="0" aria-label="Yeni proje oluştur"' : ''}>
         <img class="hero-thumb" src="assets/city.svg" alt="">
         <div class="hero-info">
           <div class="hero-top">
             <span class="eyebrow">Başlangıç</span>
-            ${icon('i-chevron', 'chev')}
+            ${canCreate ? icon('i-chevron', 'chev') : ''}
           </div>
-          <h2 class="hero-title">İlk projeni oluştur</h2>
+          <h2 class="hero-title">${canCreate ? 'İlk projeni oluştur' : 'Henüz proje yok'}</h2>
           <div class="hero-meta">
-            <span>${icon('i-pin')}<span>Yeni proje eklemek için dokun</span></span>
+            <span>${icon('i-pin')}<span>${canCreate ? 'Yeni proje eklemek için dokun' : 'Proje eklemek için yönetici girişi gerekli'}</span></span>
             <span>${icon('i-layers')}<span>Proje yok</span></span>
           </div>
         </div>
@@ -1006,7 +1106,7 @@
     const yesterdayDate = new Date();
     yesterdayDate.setDate(yesterdayDate.getDate() - 1);
     const yesterday = summaryForDay(yesterdayDate);
-    const pending = state.records.filter((record) => record.status === 'pending');
+    const pending = state.records.filter((record) => record.approvalStatus === 'pending');
     const pendingToday = pending.filter((record) => isSameDay(new Date(record.createdAt), new Date())).length;
 
     const setText = (selector, value) => {
@@ -1096,7 +1196,7 @@
     });
 
     state.records.forEach((record) => {
-      if (!hasCoordinates(record)) return;
+      if (record.approvalStatus !== 'approved' || !hasCoordinates(record)) return;
       const project = projects.get(record.projectId);
       if (!project) return;
       points.push({
@@ -1557,6 +1657,7 @@
 
     const record = state.records.find(
       (item) =>
+        item.approvalStatus === 'approved' &&
         hasCoordinates(item) &&
         (normalize(item.title).includes(needle) ||
           normalize(item.location).includes(needle) ||
@@ -1635,6 +1736,20 @@
     hideSheet(sheet);
   }
 
+  function closeAllSheets() {
+    state.confirmAction = null;
+    state.confirmReturnProject = null;
+    state.formReturnId = null;
+    state.editingId = null;
+    state.pendingRecordType = null;
+    state.pendingPhoto = '';
+    state.editingRecordId = null;
+    $$('.sheet').forEach((sheet) => {
+      if (!sheet.hidden) hideSheet(sheet);
+    });
+    document.body.classList.remove('sheet-open');
+  }
+
   function openConfirm({ title, text, confirmLabel = 'Onayla', danger = false, returnProjectId = null, onConfirm }) {
     const sheet = $('#confirmSheet');
     if (!sheet) return;
@@ -1708,6 +1823,7 @@
                       <strong>${esc(record.title)}</strong>
                       <small>${esc(record.location)}${record.team ? ` · ${esc(record.team)}` : ''}</small>
                       ${record.type === 'dig' ? `<small class="detail-volume">${formatVolume(record.volume)} m³ · ${formatVolume(record.width)} × ${formatVolume(record.depth)} × ${formatVolume(record.length)} m${record.bucket ? ` · ${formatNumber(record.bucketCount)} kova` : ''}</small>` : ''}
+                      <small class="approval-line is-${esc(record.approvalStatus)}">${esc(record.approvalLabel)}${record.approvalStatus === 'pending' ? ` · ${esc(record.createdByName)}` : ''}</small>
                     </span>
                     <time>${esc(formatRecordTime(record))}</time>
                   </div>`
@@ -1718,8 +1834,12 @@
       </div>`;
 
     foot.innerHTML = `
-      <button class="btn btn-outline" type="button" data-edit-project="${esc(project.id)}">Düzenle</button>
-      <button class="btn btn-danger" type="button" data-delete-project="${esc(project.id)}">Sil</button>
+      ${
+        isAdmin()
+          ? `<button class="btn btn-outline" type="button" data-edit-project="${esc(project.id)}">Düzenle</button>
+             <button class="btn btn-danger" type="button" data-delete-project="${esc(project.id)}">Sil</button>`
+          : ''
+      }
       ${hasCoordinates(project) ? `<button class="btn btn-outline" type="button" data-show-map="${esc(project.id)}">Haritada</button>` : ''}
       <button class="btn btn-primary" type="button" data-close-project-sheet>Kapat</button>`;
   }
@@ -1735,6 +1855,10 @@
   }
 
   function deleteProject(projectId) {
+    if (!isAdmin()) {
+      toast('Proje silme yalnızca yönetici yetkisindedir.');
+      return;
+    }
     const project = state.projects.find((item) => item.id === projectId);
     if (!project) return;
 
@@ -1785,6 +1909,10 @@
   }
 
   function openProjectForm(projectId = null, returnToDetail = false) {
+    if (!isAdmin()) {
+      toast('Proje ekleme ve düzenleme yalnızca yönetici yetkisindedir.');
+      return;
+    }
     const project = projectId ? state.projects.find((item) => item.id === projectId) : null;
     state.editingId = project ? project.id : null;
     state.formReturnId = returnToDetail && project ? project.id : null;
@@ -1808,6 +1936,11 @@
 
   function handleProjectSubmit(event) {
     event.preventDefault();
+
+    if (!isAdmin()) {
+      showProjectFormError('Bu işlem için yönetici yetkisi gerekli.');
+      return;
+    }
 
     const value = (selector) => {
       const el = $(selector);
@@ -1991,6 +2124,10 @@
 
   function openRecordForm(type = 'work', projectId = null, editingRecord = null) {
     if (!state.projects.length) {
+      if (!isAdmin()) {
+        toast('Saha kaydı için önce yönetici bir proje eklemeli.');
+        return;
+      }
       state.pendingRecordType = type;
       state.editingRecordId = null;
       openProjectForm();
@@ -2065,7 +2202,18 @@
     const title = $('#recordFormTitle');
     const submit = $('#recordFormSubmit');
     if (title) title.textContent = `${info.label} ${record ? 'Güncelle' : 'Ekle'}`;
-    if (submit) submit.textContent = record ? 'Değişiklikleri Kaydet' : 'Kaydı Ekle';
+    if (submit) {
+      submit.textContent = isAdmin()
+        ? record
+          ? 'Değişiklikleri Kaydet'
+          : 'Kaydı Ekle'
+        : record
+          ? 'Güncelle ve Onaya Gönder'
+          : 'Onaya Gönder';
+    }
+
+    const approvalNote = $('#recordApprovalNote');
+    if (approvalNote) approvalNote.hidden = isAdmin();
 
     if (projectSelect) projectSelect.disabled = false;
     showSheet($('#recordSheet'));
@@ -2075,6 +2223,10 @@
     const record = state.records.find((item) => item.id === recordId);
     if (!record) {
       toast('Kayıt bulunamadı.');
+      return;
+    }
+    if (!isAdmin() && record.approvalStatus !== 'pending') {
+      toast('Onaylanmış veya reddedilmiş kayıtları yalnızca yönetici düzenleyebilir.');
       return;
     }
     openRecordForm(record.type, record.projectId, record);
@@ -2116,6 +2268,11 @@
   function handleRecordSubmit(event) {
     event.preventDefault();
 
+    if (!state.role) {
+      showRecordFormError('Kayıt için giriş yapmalısınız.');
+      return;
+    }
+
     const value = (selector) => {
       const el = $(selector);
       return el ? cleanText(el.value) : '';
@@ -2152,6 +2309,27 @@
       ? state.records.find((item) => item.id === state.editingRecordId)
       : null;
 
+    if (editing && !isAdmin() && editing.approvalStatus !== 'pending') {
+      showRecordFormError('Bu kayıt onaylandığı için düzenlenemez.');
+      return;
+    }
+
+    const approvalStatus = editing
+      ? isAdmin()
+        ? editing.approvalStatus
+        : 'pending'
+      : isAdmin()
+        ? 'approved'
+        : 'pending';
+    const reviewedAt =
+      approvalStatus === 'approved'
+        ? editing?.reviewedAt || new Date().toISOString()
+        : '';
+    const reviewedBy =
+      approvalStatus === 'approved'
+        ? editing?.reviewedBy || AUTH_ROLES[state.role]?.name || 'Yönetici'
+        : '';
+
     const record = normalizeRecord(
       {
         id: editing ? editing.id : `record-${Date.now()}`,
@@ -2169,6 +2347,13 @@
         bucket,
         machine: value('#recordMachine'),
         status,
+        approvalStatus,
+        createdByRole: editing ? editing.createdByRole : state.role,
+        createdByName: editing
+          ? editing.createdByName
+          : AUTH_ROLES[state.role]?.name || 'Kullanıcı',
+        reviewedAt,
+        reviewedBy,
         note: value('#recordNote'),
         photo: state.pendingPhoto,
         createdAt: editing ? editing.createdAt : new Date().toISOString(),
@@ -2201,6 +2386,12 @@
       toast(`Kayıt ${editing ? 'güncellendi' : 'eklendi'} ancak cihazda yeterli kayıt alanı yok.`);
     } else if (photoDropped) {
       toast(`Kayıt ${editing ? 'güncellendi' : 'eklendi'}; fotoğraf yer kalmadığı için kaydedilmedi.`);
+    } else if (record.approvalStatus === 'pending') {
+      toast(
+        editing
+          ? 'Kayıt güncellendi ve yeniden yönetici onayına gönderildi.'
+          : 'Kayıt yönetici onayına gönderildi.'
+      );
     } else if (type === 'dig') {
       toast(`Kazı kaydı ${editing ? 'güncellendi' : 'eklendi'}: ${formatVolume(record.volume)} m³.`);
     } else {
@@ -2209,6 +2400,89 @@
   }
 
   /* ---------------- Kayıtlar ---------------- */
+
+  function renderApprovalQueue() {
+    const panel = $('#approvalPanel');
+    const list = $('#approvalQueue');
+    const count = $('#approvalQueueCount');
+    if (!panel || !list) return;
+
+    if (!isAdmin()) {
+      panel.hidden = true;
+      list.innerHTML = '';
+      return;
+    }
+
+    const projects = new Map(state.projects.map((project) => [project.id, project]));
+    const pending = state.records
+      .filter((record) => record.approvalStatus === 'pending')
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    panel.hidden = pending.length === 0;
+    if (count) count.textContent = String(pending.length);
+    if (!pending.length) {
+      list.innerHTML = '';
+      return;
+    }
+
+    list.innerHTML = pending
+      .map((record) => {
+        const project = projects.get(record.projectId);
+        const value =
+          record.type === 'dig'
+            ? `${formatVolume(record.volume)} m³ kazı`
+            : record.type === 'work'
+              ? `${formatNumber(record.meters)} m imalat`
+              : recordTypeInfo(record.type).label;
+        return `
+          <div class="approval-item">
+            <div class="approval-item-main">
+              <strong class="approval-item-title">${esc(record.title)}</strong>
+              <div class="approval-item-meta">
+                <span><b>${esc(project ? project.title : 'Proje silinmiş')}</b></span>
+                <span>${esc(value)}</span>
+                <span>${icon('i-users')}${esc(record.createdByName || 'Personel')}</span>
+                <span>${esc(formatRecordTime(record))}</span>
+              </div>
+            </div>
+            <div class="approval-actions">
+              <button class="btn btn-primary" type="button" data-approve-record="${esc(record.id)}">Onayla</button>
+              <button class="btn btn-danger" type="button" data-reject-record="${esc(record.id)}">Reddet</button>
+            </div>
+          </div>`;
+      })
+      .join('');
+  }
+
+  function reviewRecord(recordId, approvalStatus) {
+    if (!isAdmin()) {
+      toast('Bu işlem için yönetici girişi gerekli.');
+      return;
+    }
+    if (!APPROVAL_STATUS[approvalStatus]) return;
+    const record = state.records.find((item) => item.id === recordId);
+    if (!record || record.approvalStatus === approvalStatus) return;
+
+    record.approvalStatus = approvalStatus;
+    record.approvalLabel = approvalInfo(approvalStatus).label;
+    record.approvalClass = approvalInfo(approvalStatus).className;
+    record.reviewedAt = new Date().toISOString();
+    record.reviewedBy = AUTH_ROLES[state.role]?.name || 'Yönetici';
+
+    if (approvalStatus === 'approved') {
+      applyAutoProgress();
+      saveProjects();
+    }
+    saveRecords();
+    renderAll();
+    renderRecords();
+    markLocalChange();
+    toast(
+      approvalStatus === 'approved'
+        ? 'Kayıt onaylandı ve proje verilerine işlendi.'
+        : 'Kayıt reddedildi.'
+    );
+  }
 
   function recordCard(record, project) {
     return `
@@ -2228,6 +2502,7 @@
         </span>
         <span class="record-side">
           <span class="side-top"><time>${esc(formatRecordTime(record))}</time>${icon('i-chevron', 'chev')}</span>
+          <span class="badge ${esc(record.approvalClass)}">${esc(record.approvalLabel)}</span>
           <span class="badge ${esc(record.statusClass)}">${esc(record.statusLabel)}</span>
         </span>
       </button>`;
@@ -2291,6 +2566,7 @@
         if (copy) copy.textContent = 'Arama veya filtreleri değiştirerek tekrar deneyin.';
       }
     }
+    renderApprovalQueue();
   }
 
   const recordFilterGroup = $('#recordFilters');
@@ -2333,11 +2609,12 @@
     return selected ? [selected] : state.projects;
   }
 
-  function reportRecordsFor(projects, period) {
+  function reportRecordsFor(projects, period, approvalStatus = 'approved') {
     const ids = new Set(projects.map((project) => project.id));
     const start = reportStartDate(period);
     return state.records
       .filter((record) => ids.has(record.projectId))
+      .filter((record) => !approvalStatus || record.approvalStatus === approvalStatus)
       .filter((record) => !start || new Date(record.createdAt) >= start)
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }
@@ -2390,7 +2667,7 @@
     const records = reportRecordsFor(projects, state.reportPeriod);
     const workRecords = records.filter((record) => record.type === 'work');
     const digRecords = records.filter((record) => record.type === 'dig');
-    const pending = records.filter((record) => record.status === 'pending');
+    const pending = reportRecordsFor(projects, state.reportPeriod, 'pending');
     const workMeters = workRecords.reduce((total, record) => total + record.meters, 0);
     const digVolume = roundVolume(
       digRecords.reduce((total, record) => total + record.volume, 0)
@@ -2787,6 +3064,10 @@
   }
 
   function downloadReportCsv() {
+    if (!isAdmin()) {
+      toast('Rapor dışa aktarma yalnızca yönetici yetkisindedir.');
+      return;
+    }
     if (!state.projects.length && !state.records.length) {
       toast('Dışa aktarılacak rapor verisi yok.');
       return;
@@ -3082,6 +3363,28 @@
       return;
     }
 
+    const approveRecord = event.target.closest('[data-approve-record]');
+    if (approveRecord) {
+      event.preventDefault();
+      reviewRecord(approveRecord.dataset.approveRecord, 'approved');
+      return;
+    }
+
+    const rejectRecord = event.target.closest('[data-reject-record]');
+    if (rejectRecord) {
+      event.preventDefault();
+      const record = state.records.find((item) => item.id === rejectRecord.dataset.rejectRecord);
+      if (!record) return;
+      openConfirm({
+        title: 'Kaydı reddet',
+        text: `"${record.title}" kaydı reddedilecek ve proje verilerine işlenmeyecek.`,
+        confirmLabel: 'Reddet',
+        danger: true,
+        onConfirm: () => reviewRecord(record.id, 'rejected')
+      });
+      return;
+    }
+
     const showMap = event.target.closest('[data-show-map]');
     if (showMap) {
       event.preventDefault();
@@ -3358,6 +3661,157 @@
   const recordForm = $('#recordForm');
   if (recordForm) recordForm.addEventListener('submit', handleRecordSubmit);
 
+  const authRoleGrid = $('#authRoleGrid');
+  if (authRoleGrid) {
+    authRoleGrid.addEventListener('click', (event) => {
+      const roleButton = event.target.closest('[data-auth-role]');
+      if (roleButton) showAuthPinForm(roleButton.dataset.authRole);
+    });
+  }
+
+  const authPinForm = $('#authPinForm');
+  if (authPinForm) authPinForm.addEventListener('submit', handleAuthSubmit);
+
+  const authBack = $('[data-auth-back]');
+  if (authBack) authBack.addEventListener('click', showAuthRoleChoices);
+
+  const authPin = $('#authPin');
+  if (authPin) {
+    authPin.addEventListener('input', () => {
+      authPin.value = authPin.value.replace(/\D/g, '').slice(0, 4);
+    });
+  }
+
+  const profileBtn = $('#profileBtn');
+  if (profileBtn) {
+    profileBtn.addEventListener('click', () => {
+      if (!state.role) {
+        showAuthScreen(true);
+        return;
+      }
+      openConfirm({
+        title: 'Oturumu kapat',
+        text: `${AUTH_ROLES[state.role].label} oturumu kapatılacak. Devam etmek için yeniden giriş yapmanız gerekir.`,
+        confirmLabel: 'Çıkış Yap',
+        danger: true,
+        onConfirm: logout
+      });
+    });
+  }
+
+  /* ---------------- Giriş ve rol yetkileri ---------------- */
+
+  function showAuthRoleChoices() {
+    state.authRole = null;
+    const grid = $('#authRoleGrid');
+    const form = $('#authPinForm');
+    const error = $('#authPinError');
+    const pin = $('#authPin');
+    if (grid) grid.hidden = false;
+    if (form) form.hidden = true;
+    if (error) error.hidden = true;
+    if (pin) pin.value = '';
+  }
+
+  function showAuthPinForm(role) {
+    if (!AUTH_ROLES[role]) return;
+    state.authRole = role;
+    const info = AUTH_ROLES[role];
+    const grid = $('#authRoleGrid');
+    const form = $('#authPinForm');
+    const title = $('#authPinTitle');
+    const hint = $('#authPinHint');
+    const error = $('#authPinError');
+    const pin = $('#authPin');
+    if (grid) grid.hidden = true;
+    if (form) form.hidden = false;
+    if (title) title.textContent = info.title;
+    if (hint) hint.textContent = info.hint;
+    if (error) error.hidden = true;
+    if (pin) {
+      pin.value = '';
+      window.setTimeout(() => pin.focus(), 20);
+    }
+  }
+
+  function showAuthScreen(visible) {
+    const screen = $('#authScreen');
+    if (!screen) return;
+    screen.hidden = !visible;
+    document.body.classList.toggle('auth-locked', visible);
+    if (visible) showAuthRoleChoices();
+  }
+
+  function applyRolePermissions() {
+    const info = AUTH_ROLES[state.role];
+    document.body.dataset.role = state.role || '';
+    $$('[data-admin-only]').forEach((element) => {
+      element.hidden = !isAdmin();
+    });
+    const profile = $('#profileBtn');
+    if (profile) {
+      profile.textContent = info ? info.label.charAt(0) : '?';
+      profile.setAttribute(
+        'aria-label',
+        info ? `${info.label} hesabı ve çıkış` : 'Giriş yap'
+      );
+      profile.title = info ? `${info.label} · Çıkış` : 'Giriş yap';
+    }
+  }
+
+  function loginAs(role) {
+    if (!AUTH_ROLES[role]) return;
+    state.role = role;
+    state.authRole = null;
+    saveSessionRole(role);
+    showAuthScreen(false);
+    applyRolePermissions();
+    renderAll();
+    renderRecords();
+    toast(`${AUTH_ROLES[role].label} olarak giriş yapıldı.`);
+  }
+
+  function logout() {
+    state.role = null;
+    state.authRole = null;
+    clearSessionRole();
+    closeAllSheets();
+    applyRolePermissions();
+    showAuthScreen(true);
+  }
+
+  function handleAuthSubmit(event) {
+    event.preventDefault();
+    const role = state.authRole;
+    if (!AUTH_ROLES[role]) {
+      showAuthRoleChoices();
+      return;
+    }
+    const pinInput = $('#authPin');
+    const error = $('#authPinError');
+    const pin = pinInput ? pinInput.value.trim() : '';
+    if (!/^\d{4}$/.test(pin)) {
+      if (error) {
+        error.textContent = 'PIN kodu 4 haneli olmalı.';
+        error.hidden = false;
+      }
+      pinInput?.focus();
+      return;
+    }
+    if (pin !== AUTH_ROLES[role].pin) {
+      if (error) {
+        error.textContent = 'PIN kodu hatalı. Tekrar deneyin.';
+        error.hidden = false;
+      }
+      if (pinInput) {
+        pinInput.value = '';
+        pinInput.focus();
+      }
+      return;
+    }
+    loginAs(role);
+  }
+
   /* ---------------- Başlangıç ---------------- */
 
   function renderAll() {
@@ -3372,9 +3826,12 @@
   }
 
   currentLocation = loadStoredLocation();
+  state.role = loadSessionRole();
   state.projects = loadProjects();
   state.records = loadRecords();
   if (applyAutoProgress()) saveProjects();
+  applyRolePermissions();
+  showAuthScreen(!state.role);
   renderAll();
   renderRecords();
   syncFromHash();
