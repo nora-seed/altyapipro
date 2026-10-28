@@ -12,6 +12,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -303,230 +304,58 @@
       <div class="map-search-row">
         <label class="search">
           <svg aria-hidden="true"><use href="#i-search"/></svg>
-          <input type="search" placeholder="Adres, parsel, tesis veya koordinat ara..." autocomplete="off">
+          <input type="search" id="mapSearch" placeholder="Proje, kayıt veya koordinat ara..." autocomplete="off">
         </label>
-        <button class="icon-btn filter-btn" type="button" data-soon aria-label="Harita filtreleri">
+        <button class="icon-btn filter-btn" type="button" id="mapFitBtn" aria-label="Tüm harita noktalarını göster">
           <svg aria-hidden="true"><use href="#i-sliders"/></svg>
         </button>
       </div>
 
       <div class="chips scroll-x map-chips" id="branchFilters" aria-label="Altyapı türü">
-        <button class="chip is-active" type="button" data-branch="water"><i class="dot blue"></i>İçme Suyu</button>
+        <button class="chip is-active" type="button" data-branch="all"><i class="dot blue"></i>Tümü</button>
+        <button class="chip" type="button" data-branch="water"><i class="dot blue"></i>İçme Suyu</button>
         <button class="chip" type="button" data-branch="sewer"><i class="dot brown"></i>Kanalizasyon</button>
-        <button class="chip" type="button" data-branch="gas"><i class="dot amber"></i>Doğalgaz</button>
-        <button class="chip" type="button" data-branch="power"><i class="dot red"></i>Elektrik</button>
+        <button class="chip" type="button" data-branch="rain"><i class="dot green"></i>Yağmur</button>
         <button class="chip" type="button" data-branch="telecom"><i class="dot purple"></i>Telekom</button>
       </div>
 
-      <div class="map-wrap">
-        <svg class="map-svg" viewBox="0 0 430 660" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Kuzey Mahallesi saha haritası">
-          <defs>
-            <linearGradient id="mapSky" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#7d8a70"/><stop offset="1" stop-color="#6a765f"/>
-            </linearGradient>
-            <filter id="mapShadow" x="-30%" y="-30%" width="160%" height="160%">
-              <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#0b2a4b" flood-opacity=".35"/>
-            </filter>
-          </defs>
-
-          <rect width="430" height="660" fill="url(#mapSky)"/>
-
-          <path d="M0 0h150c-10 40-40 55-60 90S60 140 0 150Z" fill="#5d7a4f"/>
-          <path d="M250 0h180v70c-40 20-70 10-100 28S280 90 250 70Z" fill="#5c794e"/>
-          <path d="M0 470c60-26 90 14 150 0s110-34 160-6 80 18 120 0v196H0Z" fill="#627e55"/>
-
-          <g fill="#b9b1a1" stroke="#96907f" stroke-width="1">
-            <rect x="72" y="54" width="58" height="42" rx="2"/>
-            <rect x="145" y="42" width="46" height="54" rx="2"/>
-            <rect x="205" y="64" width="58" height="38" rx="2"/>
-            <rect x="282" y="52" width="52" height="46" rx="2"/>
-            <rect x="346" y="70" width="56" height="40" rx="2"/>
-            <rect x="40" y="128" width="60" height="50" rx="2"/>
-            <rect x="118" y="120" width="46" height="44" rx="2"/>
-            <rect x="186" y="132" width="66" height="52" rx="2"/>
-            <rect x="268" y="124" width="54" height="48" rx="2"/>
-            <rect x="338" y="132" width="58" height="50" rx="2"/>
-            <rect x="54" y="210" width="64" height="54" rx="2"/>
-            <rect x="140" y="204" width="50" height="46" rx="2"/>
-            <rect x="208" y="214" width="62" height="52" rx="2"/>
-            <rect x="292" y="206" width="52" height="48" rx="2"/>
-            <rect x="358" y="216" width="58" height="46" rx="2"/>
-            <rect x="36" y="296" width="58" height="50" rx="2"/>
-            <rect x="116" y="290" width="58" height="52" rx="2"/>
-            <rect x="194" y="300" width="58" height="48" rx="2"/>
-            <rect x="272" y="294" width="56" height="50" rx="2"/>
-            <rect x="346" y="302" width="60" height="48" rx="2"/>
-            <rect x="58" y="382" width="66" height="52" rx="2"/>
-            <rect x="146" y="376" width="52" height="48" rx="2"/>
-            <rect x="216" y="386" width="60" height="50" rx="2"/>
-            <rect x="298" y="380" width="54" height="48" rx="2"/>
-            <rect x="368" y="390" width="52" height="46" rx="2"/>
-            <rect x="48" y="464" width="58" height="46" rx="2"/>
-            <rect x="126" y="458" width="52" height="44" rx="2"/>
-            <rect x="196" y="468" width="62" height="46" rx="2"/>
-            <rect x="278" y="462" width="56" height="44" rx="2"/>
-            <rect x="352" y="470" width="58" height="44" rx="2"/>
-            <rect x="60" y="540" width="60" height="48" rx="2"/>
-            <rect x="138" y="534" width="54" height="46" rx="2"/>
-            <rect x="208" y="544" width="58" height="44" rx="2"/>
-            <rect x="290" y="538" width="58" height="46" rx="2"/>
-            <rect x="364" y="546" width="50" height="44" rx="2"/>
-          </g>
-
-          <g stroke="#8c8678" stroke-width="1.2" opacity=".7">
-            <path d="M78 58h46M78 66h46M78 74h46M78 82h46M78 90h30"/>
-            <path d="M150 48h36M150 56h36M150 64h36M150 72h36M150 80h36M150 88h22"/>
-            <path d="M210 68h48M210 76h48M210 84h48M210 92h30"/>
-            <path d="M287 58h42M287 66h42M287 74h42M287 82h42M287 90h26"/>
-            <path d="M46 134h48M46 142h48M46 150h48M46 158h48M46 166h30"/>
-            <path d="M123 126h36M123 134h36M123 142h36M123 150h36M123 158h22"/>
-            <path d="M191 138h56M191 146h56M191 154h56M191 162h56M191 170h34"/>
-            <path d="M60 216h52M60 224h52M60 232h52M60 240h52M60 248h34"/>
-            <path d="M214 220h50M214 228h50M214 236h50M214 244h50M214 252h32"/>
-            <path d="M64 388h54M64 396h54M64 404h54M64 412h54M64 420h34"/>
-            <path d="M222 392h48M222 400h48M222 408h48M222 416h48M222 424h30"/>
-            <path d="M66 546h48M66 554h48M66 562h48M66 570h48M66 578h30"/>
-            <path d="M214 550h46M214 558h46M214 566h46M214 574h46M214 582h28"/>
-          </g>
-
-          <g fill="#54734a" opacity=".95">
-            <circle cx="36" cy="46" r="9"/><circle cx="52" cy="40" r="6"/><circle cx="130" cy="108" r="7"/>
-            <circle cx="172" cy="104" r="5"/><circle cx="258" cy="112" r="8"/><circle cx="326" cy="104" r="6"/>
-            <circle cx="404" cy="122" r="7"/><circle cx="28" cy="192" r="7"/><circle cx="108" cy="188" r="5"/>
-            <circle cx="252" cy="192" r="7"/><circle cx="376" cy="186" r="6"/><circle cx="22" cy="268" r="8"/>
-            <circle cx="106" cy="282" r="5"/><circle cx="238" cy="280" r="6"/><circle cx="382" cy="272" r="7"/>
-            <circle cx="26" cy="362" r="6"/><circle cx="120" cy="356" r="5"/><circle cx="258" cy="362" r="7"/>
-            <circle cx="390" cy="356" r="6"/><circle cx="34" cy="532" r="7"/><circle cx="124" cy="522" r="5"/>
-            <circle cx="274" cy="528" r="6"/><circle cx="394" cy="524" r="7"/><circle cx="188" cy="610" r="7"/>
-            <circle cx="340" cy="614" r="6"/>
-          </g>
-
-          <g fill="none" stroke="#e9e4d9" stroke-linecap="round">
-            <path d="M100 0c-6 90 8 150 10 218s-12 132-4 210 4 150-6 232" stroke-width="26"/>
-            <path d="M232 0c8 88 4 150-4 214s4 140 0 210-6 154 2 236" stroke-width="24"/>
-            <path d="M352 0c-6 92 10 152 6 220s10 138 2 212-8 148 0 228" stroke-width="22"/>
-            <path d="M0 262c70 6 118-6 176 4s126 10 254-2" stroke-width="24"/>
-            <path d="M0 452c84-10 130 8 194 2s128 6 236 0" stroke-width="26"/>
-            <path d="M0 606c76 8 128-6 198 0s142 8 232-4" stroke-width="20"/>
-          </g>
-          <g fill="none" stroke="#d2ccc0" stroke-width="1.5" stroke-dasharray="7 9">
-            <path d="M100 0c-6 90 8 150 10 218s-12 132-4 210 4 150-6 232"/>
-            <path d="M232 0c8 88 4 150-4 214s4 140 0 210-6 154 2 236"/>
-            <path d="M0 262c70 6 118-6 176 4s126 10 254-2"/>
-            <path d="M0 452c84-10 130 8 194 2s128 6 236 0"/>
-          </g>
-
-          <g fill="none" stroke-linecap="round" filter="url(#mapShadow)">
-            <path class="pipe pipe-water" data-branch="water" d="M286 0v214c0 62-36 88-38 150s-30 90-34 158-10 138-8 138" stroke="#2b7ff0" stroke-width="4.5"/>
-            <path class="pipe pipe-sewer" data-branch="sewer" d="M0 180c80 8 120 30 178 30s92-20 250-14" stroke="#a9743f" stroke-width="4.5"/>
-            <path class="pipe pipe-gas" data-branch="gas" d="M0 356c96 12 148-16 230-16s124 18 200 8" stroke="#e8b12c" stroke-width="4.5"/>
-            <path class="pipe pipe-power" data-branch="power" d="M166 0v132c0 74-42 112-42 188s34 132 34 340" stroke="#e6534b" stroke-width="4"/>
-            <path class="pipe pipe-telecom" data-branch="telecom" d="M0 118c90 26 160 70 232 70s120-26 198-60" stroke="#8e5cd9" stroke-width="4"/>
-          </g>
-
-          <g class="pipe-nodes" fill="#fff">
-            <circle cx="286" cy="70" r="3"/><circle cx="286" cy="140" r="3"/><circle cx="272" cy="250" r="3"/>
-            <circle cx="240" cy="330" r="3"/><circle cx="220" cy="410" r="3"/><circle cx="206" cy="500" r="3"/>
-            <circle cx="100" cy="200" r="3"/><circle cx="180" cy="210" r="3"/><circle cx="330" cy="196" r="3"/>
-            <circle cx="70" cy="350" r="3"/><circle cx="250" cy="344" r="3"/><circle cx="370" cy="348" r="3"/>
-            <circle cx="166" cy="80" r="3"/><circle cx="158" cy="250" r="3"/><circle cx="158" cy="430" r="3"/>
-            <circle cx="90" cy="140" r="3"/><circle cx="240" cy="160" r="3"/><circle cx="350" cy="150" r="3"/>
-          </g>
-
-          <g filter="url(#mapShadow)">
-            <g class="map-marker" data-branch="water">
-              <circle cx="286" cy="168" r="12" fill="#2b7ff0" stroke="#fff" stroke-width="2.5"/>
-              <use href="#i-droplet" x="280" y="162" width="12" height="12" style="color:#fff" stroke-width="2.6"/>
-            </g>
-            <g class="map-marker" data-branch="water">
-              <circle cx="252" cy="372" r="12" fill="#2b7ff0" stroke="#fff" stroke-width="2.5"/>
-              <use href="#i-droplet" x="246" y="366" width="12" height="12" style="color:#fff" stroke-width="2.6"/>
-            </g>
-
-            <g class="map-marker" data-branch="sewer">
-              <circle cx="250" cy="208" r="12" fill="#a9743f" stroke="#fff" stroke-width="2.5"/>
-              <use href="#i-waves" x="244" y="202" width="12" height="12" style="color:#fff" stroke-width="2.6"/>
-            </g>
-            <g class="map-marker" data-branch="sewer">
-              <circle cx="368" cy="192" r="12" fill="#a9743f" stroke="#fff" stroke-width="2.5"/>
-              <use href="#i-waves" x="362" y="186" width="12" height="12" style="color:#fff" stroke-width="2.6"/>
-            </g>
-
-            <g class="map-marker" data-branch="gas">
-              <circle cx="196" cy="340" r="12" fill="#e8b12c" stroke="#fff" stroke-width="2.5"/>
-              <use href="#i-alert" x="190" y="334" width="12" height="12" style="color:#fff" stroke-width="2.6"/>
-            </g>
-
-            <g class="map-marker" data-branch="power">
-              <circle cx="158" cy="292" r="12" fill="#e6534b" stroke="#fff" stroke-width="2.5"/>
-              <use href="#i-zap" x="152" y="286" width="12" height="12" style="color:#fff" stroke-width="2.6"/>
-            </g>
-
-            <g class="map-marker" data-branch="telecom">
-              <circle cx="120" cy="170" r="12" fill="#8e5cd9" stroke="#fff" stroke-width="2.5"/>
-              <use href="#i-radio" x="114" y="164" width="12" height="12" style="color:#fff" stroke-width="2.6"/>
-            </g>
-            <g class="map-marker" data-branch="telecom">
-              <circle cx="332" cy="158" r="12" fill="#8e5cd9" stroke="#fff" stroke-width="2.5"/>
-              <use href="#i-radio" x="326" y="152" width="12" height="12" style="color:#fff" stroke-width="2.6"/>
-            </g>
-          </g>
-
-          <path d="M232 296 300 286 330 330 314 382 250 392 222 346Z" fill="#ef4444" fill-opacity=".16" stroke="#ef4444" stroke-width="2" stroke-dasharray="7 6"/>
-          <g filter="url(#mapShadow)">
-            <circle cx="276" cy="338" r="16" fill="#ef4444" stroke="#fff" stroke-width="3"/>
-            <use href="#i-excavator" x="268" y="330" width="16" height="16" style="color:#fff" stroke-width="2.4"/>
-          </g>
-
-          <circle cx="160" cy="462" r="30" fill="#2b7ff0" opacity=".18"/>
-          <circle cx="160" cy="462" r="13" fill="#2b7ff0" opacity=".9" stroke="#fff" stroke-width="4"/>
-
-          <g class="map-labels" font-family="-apple-system, system-ui, sans-serif" font-size="10" font-weight="700" fill="#fff" stroke="#33402f" stroke-width="2.4" paint-order="stroke" stroke-linejoin="round">
-            <text x="74" y="130">Kuzey Mahallesi</text>
-            <text x="112" y="292" transform="rotate(-80 112 292)">123. Sokak</text>
-            <text x="248" y="300" transform="rotate(-86 248 300)">125. Sokak</text>
-            <text x="198" y="452" transform="rotate(-4 198 452)">124. Sokak</text>
-            <text x="26" y="500" transform="rotate(-9 26 500)">Atatürk Caddesi</text>
-          </g>
-
-          <g transform="translate(20,566)">
-            <path d="M0 0h100" stroke="#fff" stroke-width="2" opacity=".8"/>
-            <path d="M0 -4v8M50 -4v8M100 -4v8" stroke="#fff" stroke-width="2" opacity=".8"/>
-            <text x="0" y="18" font-family="system-ui" font-size="9" fill="#fff">0</text>
-            <text x="42" y="18" font-family="system-ui" font-size="9" fill="#fff">50</text>
-            <text x="88" y="18" font-family="system-ui" font-size="9" fill="#fff">100 m</text>
-          </g>
-        </svg>
+      <div class="map-wrap" id="mapWrap">
+        <div class="leaflet-map" id="mapCanvas" aria-label="Saha haritası"></div>
+        <div class="map-empty" id="mapEmpty" hidden>
+          <span class="map-empty-icon"><svg aria-hidden="true"><use href="#i-map"/></svg></span>
+          <strong>Haritada nokta yok</strong>
+          <p>Proje veya saha kaydına enlem/boylam ekleyin.</p>
+          <button class="btn btn-primary btn-sm" type="button" data-empty-map-project>Proje Ekle</button>
+        </div>
 
         <div class="map-tools">
-          <button class="map-tool wide" type="button" data-soon>
-            <svg aria-hidden="true"><use href="#i-layers"/></svg><span>Katmanlar</span>
+          <button class="map-tool wide" type="button" id="mapLayersBtn">
+            <svg aria-hidden="true"><use href="#i-layers"/></svg><span id="mapLayersText">Uydu</span>
           </button>
-          <button class="map-tool" type="button" data-soon aria-label="Konumum">
+          <button class="map-tool" type="button" id="mapLocateBtn" aria-label="Konumumu göster">
             <svg aria-hidden="true"><use href="#i-crosshair"/></svg>
           </button>
-          <button class="map-tool" type="button" data-soon aria-label="Pusula">
+          <button class="map-tool" type="button" id="mapFitToolBtn" aria-label="Tüm noktaları göster">
             <svg aria-hidden="true"><use href="#i-compass"/></svg>
           </button>
           <button class="map-tool text" type="button" data-soon aria-label="3B görünüm">3D</button>
         </div>
 
-        <button class="satellite-chip" type="button" data-soon>
+        <button class="satellite-chip" type="button" id="mapSatelliteBtn" aria-pressed="false">
           <span class="sat-thumb" aria-hidden="true"></span>Uydu
           <svg aria-hidden="true"><use href="#i-chevron-down"/></svg>
         </button>
 
         <div class="map-sheet">
           <div class="sheet-head">
-            <h2>Yakındaki Varlıklar</h2>
-            <a class="link" href="#records">Tümünü Gör <svg aria-hidden="true"><use href="#i-chevron"/></svg></a>
+            <h2>Haritadaki Varlıklar</h2>
+            <a class="link" href="#records">Kayıtlar <svg aria-hidden="true"><use href="#i-chevron"/></svg></a>
           </div>
           <div class="nearby-grid">
-            <button class="nearby" type="button" data-soon><span class="nearby-icon tone-blue"><svg aria-hidden="true"><use href="#i-droplet"/></svg></span><span><strong>İçme Suyu</strong><small>0 adet</small></span><svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg></button>
-            <button class="nearby" type="button" data-soon><span class="nearby-icon tone-brown"><svg aria-hidden="true"><use href="#i-waves"/></svg></span><span><strong>Kanalizasyon</strong><small>0 adet</small></span><svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg></button>
-            <button class="nearby" type="button" data-soon><span class="nearby-icon tone-amber"><svg aria-hidden="true"><use href="#i-alert"/></svg></span><span><strong>Doğalgaz</strong><small>0 adet</small></span><svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg></button>
-            <button class="nearby" type="button" data-soon><span class="nearby-icon tone-red"><svg aria-hidden="true"><use href="#i-zap"/></svg></span><span><strong>Elektrik</strong><small>0 adet</small></span><svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg></button>
-            <button class="nearby" type="button" data-soon><span class="nearby-icon tone-purple"><svg aria-hidden="true"><use href="#i-radio"/></svg></span><span><strong>Telekom</strong><small>0 adet</small></span><svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg></button>
+            <button class="nearby" type="button" data-nearby-branch="water"><span class="nearby-icon tone-blue"><svg aria-hidden="true"><use href="#i-droplet"/></svg></span><span><strong>İçme Suyu</strong><small>0 adet</small></span><svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg></button>
+            <button class="nearby" type="button" data-nearby-branch="sewer"><span class="nearby-icon tone-brown"><svg aria-hidden="true"><use href="#i-waves"/></svg></span><span><strong>Kanalizasyon</strong><small>0 adet</small></span><svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg></button>
+            <button class="nearby" type="button" data-nearby-branch="rain"><span class="nearby-icon tone-green"><svg aria-hidden="true"><use href="#i-cloud-rain"/></svg></span><span><strong>Yağmur Suyu</strong><small>0 adet</small></span><svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg></button>
+            <button class="nearby" type="button" data-nearby-branch="telecom"><span class="nearby-icon tone-purple"><svg aria-hidden="true"><use href="#i-radio"/></svg></span><span><strong>Telekom</strong><small>0 adet</small></span><svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg></button>
           </div>
 
           <div class="active-work" id="mapActiveWork" role="button" tabindex="0" hidden>
@@ -538,12 +367,14 @@
               <div class="work-meta">
                 <span><svg aria-hidden="true"><use href="#i-calendar"/></svg>Başlangıç <b id="mapActiveDate">—</b></span>
                 <span><svg aria-hidden="true"><use href="#i-users"/></svg>Ekip <b id="mapActiveTeam">—</b></span>
+                <span id="mapActiveDistance" hidden><svg aria-hidden="true"><use href="#i-pin"/></svg>Mesafe <b>—</b></span>
                 <span class="work-progress"><span>Tamamlanma</span><span class="bar"><i id="mapActiveBar" style="width:0%"></i></span><b id="mapActiveProgress">%0</b></span>
               </div>
             </div>
             <span class="badge ongoing" id="mapActiveBadge">Devam Ediyor</span>
             <svg class="chev" aria-hidden="true"><use href="#i-chevron"/></svg>
           </div>
+          <div class="map-credit">Harita © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · Uydu © <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a></div>
         </div>
       </div>
     </section>
@@ -700,6 +531,21 @@
           <span>Yüklenici</span>
           <input class="field-input" id="projectContractor" name="contractor" type="text" placeholder="Firma adı" autocomplete="off">
         </label>
+        <div class="coordinate-box field-full">
+          <div class="coordinate-head"><strong>Harita konumu</strong><small>İsteğe bağlı</small></div>
+          <div class="coordinate-grid">
+            <label class="field">
+              <span>Enlem</span>
+              <input class="field-input" id="projectLat" name="lat" type="text" placeholder="Örn. 38,731" inputmode="decimal" autocomplete="off">
+            </label>
+            <label class="field">
+              <span>Boylam</span>
+              <input class="field-input" id="projectLng" name="lng" type="text" placeholder="Örn. 35,485" inputmode="decimal" autocomplete="off">
+            </label>
+          </div>
+          <button class="btn btn-outline coordinate-locate" type="button" id="projectUseLocation"><svg aria-hidden="true"><use href="#i-crosshair"/></svg> Konumumu kullan</button>
+          <small class="field-hint">Haritada görünmesi için enlem ve boylam birlikte girilmelidir.</small>
+        </div>
         <label class="field">
           <span>Mevcut hat</span>
           <input class="field-input" id="projectLength" name="length" type="text" placeholder="Örn. 2,5 km" inputmode="decimal">
@@ -784,6 +630,21 @@
           <span>Konum</span>
           <input class="field-input" id="recordLocation" name="location" type="text" placeholder="Mahalle, sokak veya adres" autocomplete="off">
         </label>
+        <div class="coordinate-box field-full">
+          <div class="coordinate-head"><strong>Harita konumu</strong><small>İsteğe bağlı</small></div>
+          <div class="coordinate-grid">
+            <label class="field">
+              <span>Enlem</span>
+              <input class="field-input" id="recordLat" name="lat" type="text" placeholder="Örn. 38,731" inputmode="decimal" autocomplete="off">
+            </label>
+            <label class="field">
+              <span>Boylam</span>
+              <input class="field-input" id="recordLng" name="lng" type="text" placeholder="Örn. 35,485" inputmode="decimal" autocomplete="off">
+            </label>
+          </div>
+          <button class="btn btn-outline coordinate-locate" type="button" id="recordUseLocation"><svg aria-hidden="true"><use href="#i-crosshair"/></svg> Konumumu kullan</button>
+          <small class="field-hint">Boş bırakılırsa kayıt ayrı pin olarak gösterilmez.</small>
+        </div>
         <label class="field">
           <span>Ekip seç</span>
           <select class="field-input" id="recordTeamSelect" name="teamSelect">
@@ -874,6 +735,7 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+<script src="vendor/leaflet/leaflet.js"></script>
 <script src="js/data.js"></script>
 <script src="js/app.js"></script>
 </body>

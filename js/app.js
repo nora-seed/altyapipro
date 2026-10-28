@@ -12,7 +12,8 @@
   const STORAGE = {
     projects: 'altyapipro.projects.v2',
     records: 'altyapipro.records.v1',
-    lastChange: 'altyapipro.lastChange.v1'
+    lastChange: 'altyapipro.lastChange.v1',
+    location: 'altyapipro.location.v1'
   };
 
   const STATUS = {
@@ -44,6 +45,30 @@
     error: { label: 'Sorun Var', className: 'error' }
   };
 
+  const BRANCHES = {
+    water: { label: 'İçme Suyu', color: '#1f6ff0', icon: 'i-droplet', tone: 'blue' },
+    sewer: { label: 'Kanalizasyon', color: '#a9743f', icon: 'i-waves', tone: 'brown' },
+    rain: { label: 'Yağmur Suyu', color: '#17a34a', icon: 'i-cloud-rain', tone: 'green' },
+    telecom: { label: 'Telekom', color: '#8b5cf6', icon: 'i-radio', tone: 'purple' }
+  };
+
+  const TILE_SOURCES = {
+    street: {
+      url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      options: {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
+      }
+    },
+    satellite: {
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      options: {
+        maxZoom: 19,
+        attribution: 'Tiles &copy; <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a>'
+      }
+    }
+  };
+
   const state = {
     projects: [],
     records: [],
@@ -62,8 +87,24 @@
     pendingPhoto: '',
     sheetFocus: null,
     confirmAction: null,
-    confirmReturnProject: null
+    confirmReturnProject: null,
+    mapBranch: 'all',
+    mapSatellite: false
   };
+
+  let mapInstance = null;
+  let streetLayer = null;
+  let satelliteLayer = null;
+  let projectLayer = null;
+  let recordLayer = null;
+  let locationLayer = null;
+  let locationMarker = null;
+  let searchMarker = null;
+  let currentLocation = null;
+  let mapEverRendered = false;
+  let tileErrorShown = false;
+  const projectMarkers = new Map();
+  const recordMarkers = new Map();
 
   const esc = (value) =>
     String(value == null ? '' : value)
@@ -134,6 +175,72 @@
     return Math.round(value * 100) / 100;
   }
 
+  function normalizeCoordinate(value, min, max) {
+    if (value === null || value === undefined || value === '') return null;
+    const amount = Number(String(value).replace(',', '.'));
+    return Number.isFinite(amount) && amount >= min && amount <= max ? amount : null;
+  }
+
+  function readCoordinates(latSelector, lngSelector) {
+    const latText = cleanText($(latSelector)?.value);
+    const lngText = cleanText($(lngSelector)?.value);
+    if (!latText && !lngText) return { lat: null, lng: null };
+    if (!latText || !lngText) {
+      return { error: 'Enlem ve boylam birlikte girilmeli.' };
+    }
+    const lat = normalizeCoordinate(latText, -90, 90);
+    const lng = normalizeCoordinate(lngText, -180, 180);
+    if (lat === null || lng === null) {
+      return { error: 'Geçerli enlem (-90 / 90) ve boylam (-180 / 180) girin.' };
+    }
+    return { lat, lng };
+  }
+
+  function hasCoordinates(item) {
+    return Number.isFinite(item?.lat) && Number.isFinite(item?.lng);
+  }
+
+  function formatCoordinate(value) {
+    return Number(value).toLocaleString('tr-TR', { maximumFractionDigits: 5 });
+  }
+
+  function projectBranch(project) {
+    const type = normalize(project?.type || '');
+    if (type.includes('kanalizasyon')) return 'sewer';
+    if (type.includes('yağmur')) return 'rain';
+    if (type.includes('telekom')) return 'telecom';
+    return 'water';
+  }
+
+  function branchInfo(branch) {
+    return BRANCHES[branch] || BRANCHES.water;
+  }
+
+  function haversineKm(a, b) {
+    if (!a || !b) return null;
+    const toRad = (value) => (value * Math.PI) / 180;
+    const earth = 6371;
+    const dLat = toRad(b.lat - a.lat);
+    const dLng = toRad(b.lng - a.lng);
+    const lat1 = toRad(a.lat);
+    const lat2 = toRad(b.lat);
+    const value =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+    return earth * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
+  }
+
+  function formatDistance(km) {
+    if (!Number.isFinite(km)) return '';
+    return km < 1 ? `${formatNumber(Math.round(km * 1000))} m` : `${formatNumber(km)} km`;
+  }
+
+  function distanceLabel(lat, lng) {
+    if (!currentLocation) return '';
+    const km = haversineKm(currentLocation, { lat, lng });
+    return km === null ? '' : formatDistance(km);
+  }
+
   function projectWorkMeters(projectId) {
     return state.records
       .filter((record) => record.projectId === projectId && record.type === 'work')
@@ -192,7 +299,9 @@
       contractor: cleanText(project.contractor) || 'Belirtilmedi',
       startDate: cleanText(project.startDate) || 'Belirtilmedi',
       description: cleanText(project.description) || 'Açıklama eklenmedi.',
-      autoProgress: Boolean(project.autoProgress)
+      autoProgress: Boolean(project.autoProgress),
+      lat: normalizeCoordinate(project.lat, -90, 90),
+      lng: normalizeCoordinate(project.lng, -180, 180)
     };
   }
 
@@ -239,7 +348,9 @@
         typeof record.photo === 'string' && record.photo.indexOf('data:image/') === 0
           ? record.photo
           : '',
-      createdAt
+      createdAt,
+      lat: normalizeCoordinate(record.lat, -90, 90),
+      lng: normalizeCoordinate(record.lng, -180, 180)
     };
   }
 
@@ -435,6 +546,11 @@
     });
 
     if (scroll) window.scrollTo(0, 0);
+
+    if (name === 'map') {
+      const raf = window.requestAnimationFrame || ((callback) => window.setTimeout(callback, 0));
+      raf(() => ensureMap());
+    }
   }
 
   function syncFromHash() {
@@ -890,6 +1006,445 @@
       badge.className = `badge ${featured.status}`;
       badge.textContent = featured.statusLabel;
     }
+    const distanceEl = $('#mapActiveDistance');
+    if (distanceEl) {
+      const distance = hasCoordinates(featured) ? distanceLabel(featured.lat, featured.lng) : '';
+      distanceEl.hidden = !distance;
+      const distanceValue = $('b', distanceEl);
+      if (distanceValue) distanceValue.textContent = distance || '—';
+    }
+  }
+
+  /* ---------------- Harita ---------------- */
+
+  function mappedPoints() {
+    const points = [];
+    const projects = new Map(state.projects.map((project) => [project.id, project]));
+
+    state.projects.forEach((project) => {
+      if (!hasCoordinates(project)) return;
+      points.push({
+        kind: 'project',
+        id: project.id,
+        project,
+        lat: project.lat,
+        lng: project.lng,
+        branch: projectBranch(project)
+      });
+    });
+
+    state.records.forEach((record) => {
+      if (!hasCoordinates(record)) return;
+      const project = projects.get(record.projectId);
+      if (!project) return;
+      points.push({
+        kind: 'record',
+        id: record.id,
+        project,
+        record,
+        lat: record.lat,
+        lng: record.lng,
+        branch: projectBranch(project)
+      });
+    });
+
+    return points;
+  }
+
+  function mapPopupHtml(point) {
+    const branch = branchInfo(point.branch);
+    const project = point.project;
+    const isRecord = point.kind === 'record';
+    const record = point.record;
+    const title = isRecord ? record.title : project.title;
+    const subtitle = isRecord
+      ? `${project.title}${record.location && record.location !== project.location ? ` · ${record.location}` : ''}`
+      : project.location;
+    const detail = isRecord
+      ? `${recordTypeInfo(record.type).label}${record.type === 'dig' ? ` · ${formatVolume(record.volume)} m³` : ''} · ${formatRecordTime(record)}`
+      : `${project.type} · %${project.progress}`;
+    const distance = distanceLabel(point.lat, point.lng);
+
+    return `
+      <div class="map-popup" style="--pin:${branch.color}">
+        <span class="map-popup-type">${esc(branch.label)} · ${esc(isRecord ? 'Saha Kaydı' : 'Proje')}</span>
+        <strong>${esc(title)}</strong>
+        <small>${esc(subtitle)}</small>
+        <small>${esc(detail)}${distance ? ` · ${esc(distance)}` : ''}</small>
+        <button type="button" data-project-id="${esc(project.id)}">Projeyi Aç</button>
+      </div>`;
+  }
+
+  function renderMapNearby() {
+    const points = mappedPoints();
+    const counts = { water: 0, sewer: 0, rain: 0, telecom: 0 };
+    points.forEach((point) => {
+      if (counts[point.branch] != null) counts[point.branch] += 1;
+    });
+
+    $$('[data-nearby-branch]').forEach((button) => {
+      const branch = button.dataset.nearbyBranch;
+      const count = counts[branch] || 0;
+      const value = button.querySelector('small');
+      if (value) value.textContent = `${count} adet`;
+      button.classList.toggle('is-active', state.mapBranch === branch);
+    });
+
+    $$('#branchFilters .chip').forEach((chip) => {
+      chip.classList.toggle('is-active', chip.dataset.branch === state.mapBranch);
+    });
+
+    const empty = $('#mapEmpty');
+    if (empty) empty.hidden = points.length > 0 || Boolean(currentLocation);
+  }
+
+  function fitMapToData() {
+    if (!mapInstance) return;
+    const points = mappedPoints();
+    const bounds = window.L.latLngBounds(points.map((point) => [point.lat, point.lng]));
+    if (currentLocation) bounds.extend([currentLocation.lat, currentLocation.lng]);
+    if (bounds.isValid()) {
+      mapInstance.fitBounds(bounds.pad(0.24), { maxZoom: 15, animate: true });
+    } else {
+      mapInstance.setView([39, 35], 6);
+    }
+  }
+
+  function updateLocationMarker() {
+    if (!mapInstance || !locationLayer) return;
+    locationLayer.clearLayers();
+    locationMarker = null;
+    if (!currentLocation) return;
+
+    const locationIcon = window.L.divIcon({
+      className: 'map-location-icon',
+      html: '<span class="map-location-dot"></span>',
+      iconSize: [18, 18],
+      iconAnchor: [9, 9]
+    });
+
+    locationMarker = window.L.marker([currentLocation.lat, currentLocation.lng], {
+      icon: locationIcon,
+      keyboard: false,
+      zIndexOffset: 1000,
+      title: 'Konumunuz'
+    })
+      .addTo(locationLayer)
+      .bindPopup(
+        `<div class="map-popup" style="--pin:#1f6ff0"><span class="map-popup-type">GPS</span><strong>Konumunuz</strong><small>${formatCoordinate(currentLocation.lat)}, ${formatCoordinate(currentLocation.lng)}</small></div>`,
+        { closeButton: true, maxWidth: 200 }
+      );
+  }
+
+  function renderMapData({ fit = false } = {}) {
+    renderMapNearby();
+    if (!mapInstance) return;
+
+    projectLayer.clearLayers();
+    recordLayer.clearLayers();
+    projectMarkers.clear();
+    recordMarkers.clear();
+
+    if (searchMarker) {
+      mapInstance.removeLayer(searchMarker);
+      searchMarker = null;
+    }
+
+    mappedPoints()
+      .filter((point) => state.mapBranch === 'all' || point.branch === state.mapBranch)
+      .forEach((point) => {
+        const branch = branchInfo(point.branch);
+        const isRecord = point.kind === 'record';
+        const markerIcon = isRecord
+          ? window.L.divIcon({
+              className: 'map-record-icon',
+              html: `<span class="map-record-dot" style="--pin:${branch.color}"></span>`,
+              iconSize: [15, 15],
+              iconAnchor: [7.5, 7.5],
+              popupAnchor: [0, -8]
+            })
+          : window.L.divIcon({
+              className: 'map-pin-icon',
+              html: `<span class="map-pin-body" style="--pin:${branch.color}">${icon(branch.icon)}</span>`,
+              iconSize: [30, 38],
+              iconAnchor: [15, 36],
+              popupAnchor: [0, -31]
+            });
+
+        const marker = window.L.marker([point.lat, point.lng], {
+          icon: markerIcon,
+          title: isRecord ? point.record.title : point.project.title,
+          zIndexOffset: isRecord ? 0 : 300
+        });
+        marker.bindPopup(mapPopupHtml(point), {
+          closeButton: true,
+          maxWidth: 230,
+          minWidth: 180,
+          autoPanPaddingTopLeft: [20, 80],
+          autoPanPaddingBottomRight: [20, 290]
+        });
+        marker.on('click', () => renderMapActive(point.project));
+
+        if (isRecord) {
+          marker.addTo(recordLayer);
+          recordMarkers.set(point.id, marker);
+        } else {
+          marker.addTo(projectLayer);
+          projectMarkers.set(point.id, marker);
+        }
+      });
+
+    if (fit) fitMapToData();
+  }
+
+  function setMapBranch(branch) {
+    state.mapBranch = branch === 'all' || BRANCHES[branch] ? branch : 'all';
+    renderMapData();
+  }
+
+  function updateBaseButtons() {
+    const label = $('#mapLayersText');
+    if (label) label.textContent = state.mapSatellite ? 'Sokak' : 'Uydu';
+    const chip = $('#mapSatelliteBtn');
+    if (chip) {
+      chip.classList.toggle('is-active', state.mapSatellite);
+      chip.setAttribute('aria-pressed', String(state.mapSatellite));
+    }
+  }
+
+  function setBaseLayer(satellite) {
+    state.mapSatellite = Boolean(satellite);
+    updateBaseButtons();
+    if (!mapInstance) return;
+
+    if (state.mapSatellite) {
+      if (mapInstance.hasLayer(streetLayer)) mapInstance.removeLayer(streetLayer);
+      if (!mapInstance.hasLayer(satelliteLayer)) satelliteLayer.addTo(mapInstance);
+    } else {
+      if (mapInstance.hasLayer(satelliteLayer)) mapInstance.removeLayer(satelliteLayer);
+      if (!mapInstance.hasLayer(streetLayer)) streetLayer.addTo(mapInstance);
+    }
+  }
+
+  function initMap() {
+    if (mapInstance || !window.L) return;
+    const canvas = $('#mapCanvas');
+    if (!canvas) return;
+
+    mapInstance = window.L.map(canvas, {
+      zoomControl: false,
+      attributionControl: false,
+      minZoom: 5,
+      maxZoom: 19,
+      worldCopyJump: true
+    });
+    mapInstance.setView([39, 35], 6);
+
+    streetLayer = window.L.tileLayer(TILE_SOURCES.street.url, TILE_SOURCES.street.options);
+    satelliteLayer = window.L.tileLayer(TILE_SOURCES.satellite.url, TILE_SOURCES.satellite.options);
+    streetLayer.addTo(mapInstance);
+
+    projectLayer = window.L.layerGroup().addTo(mapInstance);
+    recordLayer = window.L.layerGroup().addTo(mapInstance);
+    locationLayer = window.L.layerGroup().addTo(mapInstance);
+
+    const showTileError = () => {
+      if (tileErrorShown) return;
+      tileErrorShown = true;
+      toast('Harita karoları yüklenemedi. Bağlantıyı kontrol edin.');
+    };
+    streetLayer.on('tileerror', showTileError);
+    satelliteLayer.on('tileerror', showTileError);
+
+    $('#mapWrap')?.classList.add('map-ready');
+    setBaseLayer(state.mapSatellite);
+    updateLocationMarker();
+  }
+
+  function ensureMap() {
+    if (!window.L) {
+      toast('Harita motoru yüklenemedi.');
+      return;
+    }
+    if (!mapInstance) initMap();
+    if (!mapInstance) return;
+    mapInstance.invalidateSize();
+    if (!mapEverRendered) {
+      renderMapData({ fit: true });
+      mapEverRendered = true;
+    } else {
+      renderMapData();
+    }
+  }
+
+  function setCurrentLocation(location, { fly = false } = {}) {
+    currentLocation = {
+      lat: location.lat,
+      lng: location.lng,
+      accuracy: Number.isFinite(location.accuracy) ? location.accuracy : 0,
+      updatedAt: new Date().toISOString()
+    };
+    writeStorage(STORAGE.location, JSON.stringify(currentLocation));
+    updateLocationMarker();
+    if (mapInstance) {
+      renderMapData();
+      const activeId = $('#mapActiveWork')?.dataset.projectId;
+      const activeProject = state.projects.find((project) => project.id === activeId);
+      if (activeProject) renderMapActive(activeProject);
+      if (fly) {
+        mapInstance.flyTo([currentLocation.lat, currentLocation.lng], Math.max(mapInstance.getZoom(), 14), {
+          duration: 0.9
+        });
+      }
+    }
+  }
+
+  function requestLocation({ fly = false, silent = false } = {}) {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        if (!silent) toast('Bu cihaz konum servisini desteklemiyor.');
+        reject(new Error('unsupported'));
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const location = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+            accuracy: position.coords.accuracy
+          };
+          setCurrentLocation(location, { fly });
+          if (!silent) toast('Konum alındı.');
+          resolve(location);
+        },
+        (error) => {
+          if (!silent) {
+            const message =
+              error?.code === 1
+                ? 'Konum izni verilmedi. Tarayıcı ayarlarından izin verin.'
+                : error?.code === 3
+                  ? 'Konum isteği zaman aşımına uğradı.'
+                  : 'Konum alınamadı. Tekrar deneyin.';
+            toast(message);
+          }
+          reject(error);
+        },
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
+      );
+    });
+  }
+
+  function loadStoredLocation() {
+    const raw = readStorage(STORAGE.location);
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      const lat = normalizeCoordinate(parsed.lat, -90, 90);
+      const lng = normalizeCoordinate(parsed.lng, -180, 180);
+      if (lat === null || lng === null) return null;
+      return { lat, lng, accuracy: Number(parsed.accuracy) || 0, updatedAt: parsed.updatedAt || '' };
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function refreshMapForData() {
+    if (mapInstance) renderMapData();
+    else renderMapNearby();
+  }
+
+  function focusProjectOnMap(projectId) {
+    const project = state.projects.find((item) => item.id === projectId);
+    if (!project) return;
+    ensureMap();
+    if (!mapInstance) return;
+    if (!hasCoordinates(project)) {
+      toast('Bu projede harita konumu yok.');
+      return;
+    }
+    state.mapBranch = 'all';
+    renderMapData();
+    renderMapActive(project);
+    mapInstance.flyTo([project.lat, project.lng], Math.max(mapInstance.getZoom(), 15), {
+      duration: 0.8
+    });
+    const marker = projectMarkers.get(project.id);
+    if (marker) window.setTimeout(() => marker.openPopup(), 220);
+  }
+
+  function focusRecordOnMap(record) {
+    const project = state.projects.find((item) => item.id === record.projectId);
+    if (!project || !hasCoordinates(record)) return;
+    ensureMap();
+    if (!mapInstance) return;
+    state.mapBranch = 'all';
+    renderMapData();
+    renderMapActive(project);
+    mapInstance.flyTo([record.lat, record.lng], Math.max(mapInstance.getZoom(), 16), {
+      duration: 0.8
+    });
+    const marker = recordMarkers.get(record.id);
+    if (marker) window.setTimeout(() => marker.openPopup(), 220);
+  }
+
+  function runMapSearch(rawQuery) {
+    const query = cleanText(rawQuery);
+    if (!query) return;
+    ensureMap();
+    if (!mapInstance) return;
+
+    const coordinateMatch = query.match(
+      /^(-?\d+(?:[.,]\d+)?)\s*(?:[,;]\s*|\s+)(-?\d+(?:[.,]\d+)?)$/
+    );
+    if (coordinateMatch) {
+      const lat = normalizeCoordinate(coordinateMatch[1], -90, 90);
+      const lng = normalizeCoordinate(coordinateMatch[2], -180, 180);
+      if (lat !== null && lng !== null) {
+        if (searchMarker) mapInstance.removeLayer(searchMarker);
+        searchMarker = window.L.marker([lat, lng], {
+          icon: window.L.divIcon({
+            className: 'map-location-icon',
+            html: '<span class="map-location-dot"></span>',
+            iconSize: [18, 18],
+            iconAnchor: [9, 9]
+          })
+        })
+          .addTo(mapInstance)
+          .bindPopup(
+            `<div class="map-popup" style="--pin:#1f6ff0"><span class="map-popup-type">Arama</span><strong>${formatCoordinate(lat)}, ${formatCoordinate(lng)}</strong></div>`
+          )
+          .openPopup();
+        mapInstance.flyTo([lat, lng], 16, { duration: 0.8 });
+        return;
+      }
+    }
+
+    const needle = normalize(query);
+    const project = state.projects.find(
+      (item) =>
+        normalize(item.title).includes(needle) ||
+        normalize(item.location).includes(needle) ||
+        normalize(item.type).includes(needle)
+    );
+    if (project) {
+      focusProjectOnMap(project.id);
+      return;
+    }
+
+    const record = state.records.find(
+      (item) =>
+        hasCoordinates(item) &&
+        (normalize(item.title).includes(needle) ||
+          normalize(item.location).includes(needle) ||
+          normalize(item.team).includes(needle))
+    );
+    if (record) {
+      focusRecordOnMap(record);
+      return;
+    }
+
+    toast('Eşleşen konum bulunamadı.');
   }
 
   /* ---------------- Sheet yardımcıları ---------------- */
@@ -1001,6 +1556,7 @@
         <div class="detail-stat"><span>Personel</span><strong>${esc(project.personnel)} kişi</strong></div>
         <div class="detail-stat"><span>Kalan süre</span><strong>${esc(project.days)} gün</strong></div>
         <div class="detail-stat is-wide"><span>Yüklenici</span><strong>${esc(project.contractor)}</strong></div>
+        <div class="detail-stat is-wide"><span>Harita konumu</span><strong>${hasCoordinates(project) ? `${esc(formatCoordinate(project.lat))}, ${esc(formatCoordinate(project.lng))}` : 'Eklenmedi'}</strong></div>
       </div>
       <div class="detail-progress">
         <div class="detail-progress-head"><span>Fiziki gerçekleşme</span><b>%${esc(project.progress)}</b></div>
@@ -1040,6 +1596,7 @@
     foot.innerHTML = `
       <button class="btn btn-outline" type="button" data-edit-project="${esc(project.id)}">Düzenle</button>
       <button class="btn btn-danger" type="button" data-delete-project="${esc(project.id)}">Sil</button>
+      ${hasCoordinates(project) ? `<button class="btn btn-outline" type="button" data-show-map="${esc(project.id)}">Haritada</button>` : ''}
       <button class="btn btn-primary" type="button" data-close-project-sheet>Kapat</button>`;
   }
 
@@ -1089,6 +1646,8 @@
     setValue('#projectTotal', project ? project.total : '');
     setValue('#projectPersonnel', project ? project.personnel : '');
     setValue('#projectDays', project ? project.days : '');
+    setValue('#projectLat', project && hasCoordinates(project) ? project.lat : '');
+    setValue('#projectLng', project && hasCoordinates(project) ? project.lng : '');
     setValue('#projectProgress', project ? project.progress : 0);
     setValue(
       '#projectDescription',
@@ -1146,6 +1705,12 @@
       return;
     }
 
+    const coordinates = readCoordinates('#projectLat', '#projectLng');
+    if (coordinates.error) {
+      showProjectFormError(coordinates.error);
+      return;
+    }
+
     const district = value('#projectDistrict');
     const type = value('#projectType') || 'İçme Suyu Hattı';
     const status = value('#projectStatus') || 'ongoing';
@@ -1177,7 +1742,9 @@
           month: 'short',
           year: 'numeric'
         }).format(new Date()),
-        description: value('#projectDescription') || 'Açıklama eklenmedi.'
+        description: value('#projectDescription') || 'Açıklama eklenmedi.',
+        lat: coordinates.lat,
+        lng: coordinates.lng
       },
       state.projects.length
     );
@@ -1314,6 +1881,8 @@
 
     setValue('#recordTitle', info.defaultTitle);
     setValue('#recordLocation', project && project.location !== 'Konum belirtilmedi' ? project.location : '');
+    setValue('#recordLat', project && hasCoordinates(project) ? project.lat : '');
+    setValue('#recordLng', project && hasCoordinates(project) ? project.lng : '');
     populateTeamOptions();
     setValue('#recordTeam', '');
     setValue('#recordPeople', '1');
@@ -1394,6 +1963,12 @@
       return;
     }
 
+    const coordinates = readCoordinates('#recordLat', '#recordLng');
+    if (coordinates.error) {
+      showRecordFormError(coordinates.error);
+      return;
+    }
+
     const type = RECORD_TYPES[value('#recordType')] ? value('#recordType') : 'work';
     const info = recordTypeInfo(type);
     const status = RECORD_STATUS[value('#recordStatus')] ? value('#recordStatus') : 'completed';
@@ -1429,7 +2004,9 @@
         status,
         note: value('#recordNote'),
         photo: state.pendingPhoto,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        lat: coordinates.lat,
+        lng: coordinates.lng
       },
       state.records.length
     );
@@ -1568,30 +2145,87 @@
     });
   }
 
-  /* ---------------- Harita branş filtresi ---------------- */
-
-  function applyBranch(branch) {
-    $$('.map-marker').forEach((marker) => {
-      marker.classList.toggle('is-dim', marker.dataset.branch !== branch);
-    });
-    $$('.pipe').forEach((pipe) => {
-      pipe.classList.toggle('is-dim', pipe.dataset.branch !== branch);
-    });
-  }
+  /* ---------------- Harita etkileşimleri ---------------- */
 
   const branchGroup = $('#branchFilters');
   if (branchGroup) {
     branchGroup.addEventListener('click', (event) => {
       const chip = event.target.closest('.chip');
       if (!chip) return;
-      const branch = chip.dataset.branch;
-
-      $$('.chip', branchGroup).forEach((item) => item.classList.toggle('is-active', item === chip));
-      applyBranch(branch);
+      setMapBranch(chip.dataset.branch || 'all');
     });
+  }
 
-    const initialBranch = branchGroup.querySelector('.chip.is-active');
-    applyBranch(initialBranch ? initialBranch.dataset.branch : 'water');
+  const nearbyGroup = $('.nearby-grid');
+  if (nearbyGroup) {
+    nearbyGroup.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-nearby-branch]');
+      if (!button) return;
+      const branch = button.dataset.nearbyBranch;
+      setMapBranch(state.mapBranch === branch ? 'all' : branch);
+    });
+  }
+
+  const mapSearch = $('#mapSearch');
+  if (mapSearch) {
+    mapSearch.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      runMapSearch(mapSearch.value);
+    });
+    mapSearch.addEventListener('search', () => {
+      if (!mapSearch.value) {
+        if (searchMarker && mapInstance) mapInstance.removeLayer(searchMarker);
+        searchMarker = null;
+      }
+    });
+  }
+
+  const mapFitBtn = $('#mapFitBtn');
+  if (mapFitBtn) {
+    mapFitBtn.addEventListener('click', () => {
+      ensureMap();
+      if (mapInstance) fitMapToData();
+    });
+  }
+
+  const mapFitToolBtn = $('#mapFitToolBtn');
+  if (mapFitToolBtn) {
+    mapFitToolBtn.addEventListener('click', () => {
+      ensureMap();
+      if (mapInstance) fitMapToData();
+    });
+  }
+
+  const mapLocateBtn = $('#mapLocateBtn');
+  if (mapLocateBtn) {
+    mapLocateBtn.addEventListener('click', async () => {
+      ensureMap();
+      mapLocateBtn.disabled = true;
+      try {
+        await requestLocation({ fly: true });
+      } catch (error) {
+        /* toast is handled by requestLocation */
+      } finally {
+        mapLocateBtn.disabled = false;
+      }
+    });
+  }
+
+  const mapLayersBtn = $('#mapLayersBtn');
+  if (mapLayersBtn) {
+    mapLayersBtn.addEventListener('click', () => {
+      ensureMap();
+      setBaseLayer(!state.mapSatellite);
+    });
+  }
+
+  const mapSatelliteBtn = $('#mapSatelliteBtn');
+  if (mapSatelliteBtn) {
+    mapSatelliteBtn.addEventListener('click', () => {
+      ensureMap();
+      setBaseLayer(!state.mapSatellite);
+    });
   }
 
   /* ---------------- Yerel yenileme ---------------- */
@@ -1688,6 +2322,24 @@
     if (emptyHero) {
       event.preventDefault();
       openProjectForm();
+      return;
+    }
+
+    const emptyMap = event.target.closest('[data-empty-map-project]');
+    if (emptyMap) {
+      event.preventDefault();
+      openProjectForm();
+      return;
+    }
+
+    const showMap = event.target.closest('[data-show-map]');
+    if (showMap) {
+      event.preventDefault();
+      const projectId = showMap.dataset.showMap;
+      hideSheet($('#projectSheet'));
+      if (window.location.hash === '#map') setScreen('map');
+      else window.location.hash = '#map';
+      window.setTimeout(() => focusProjectOnMap(projectId), 140);
       return;
     }
 
@@ -1860,6 +2512,48 @@
       const project = state.projects.find((item) => item.id === recordProject.value);
       const location = $('#recordLocation');
       if (project && location && !location.value.trim()) location.value = project.location;
+      if (project && hasCoordinates(project)) {
+        const lat = $('#recordLat');
+        const lng = $('#recordLng');
+        if (lat && !lat.value.trim()) lat.value = project.lat;
+        if (lng && !lng.value.trim()) lng.value = project.lng;
+      }
+    });
+  }
+
+  const projectUseLocation = $('#projectUseLocation');
+  if (projectUseLocation) {
+    projectUseLocation.addEventListener('click', async () => {
+      projectUseLocation.disabled = true;
+      try {
+        const location = await requestLocation({ fly: false });
+        const lat = $('#projectLat');
+        const lng = $('#projectLng');
+        if (lat) lat.value = location.lat;
+        if (lng) lng.value = location.lng;
+      } catch (error) {
+        /* toast is handled by requestLocation */
+      } finally {
+        projectUseLocation.disabled = false;
+      }
+    });
+  }
+
+  const recordUseLocation = $('#recordUseLocation');
+  if (recordUseLocation) {
+    recordUseLocation.addEventListener('click', async () => {
+      recordUseLocation.disabled = true;
+      try {
+        const location = await requestLocation({ fly: false });
+        const lat = $('#recordLat');
+        const lng = $('#recordLng');
+        if (lat) lat.value = location.lat;
+        if (lng) lng.value = location.lng;
+      } catch (error) {
+        /* toast is handled by requestLocation */
+      } finally {
+        recordUseLocation.disabled = false;
+      }
     });
   }
 
@@ -1898,8 +2592,10 @@
     renderHome();
     renderProjects();
     syncSelectLabels();
+    refreshMapForData();
   }
 
+  currentLocation = loadStoredLocation();
   state.projects = loadProjects();
   state.records = loadRecords();
   if (applyAutoProgress()) saveProjects();
