@@ -430,17 +430,106 @@
           <h1 class="page-title">Raporlar</h1>
           <p class="page-sub">Projelerinizin performansını analiz edin.</p>
         </div>
-        <button class="btn btn-outline" type="button" data-soon>
+        <button class="btn btn-outline" type="button" id="reportExportBtn">
           <svg aria-hidden="true"><use href="#i-download"/></svg>Rapor Dışa Aktar
         </button>
       </div>
 
+      <div id="reportFilters"></div>
+
       <div class="empty-state reports-empty" id="reportsEmpty">
         <svg aria-hidden="true"><use href="#i-reports"/></svg>
         <strong>Henüz rapor verisi yok</strong>
-        <p>Rapor ekranı bir sonraki adımda gerçek proje ve kayıt verileriyle hazırlanacak.</p>
+        <p>Proje veya saha kaydı ekleyince raporlar burada oluşur.</p>
       </div>
 
+      <div id="reportsContent" hidden>
+        <p class="report-summary-line" id="reportSummary">Rapor özeti</p>
+
+        <div class="kpi-grid">
+          <article class="kpi-card">
+            <div class="kpi-donut" id="reportKpiDonut" style="--p:0"><span id="reportKpiProgress">%0</span></div>
+            <div class="kpi-copy">
+              <span>Ortalama İlerleme</span>
+              <strong id="reportKpiProjects">0 <small>proje</small></strong>
+              <small class="kpi-sub" id="reportKpiProgressSub">Proje yok</small>
+            </div>
+          </article>
+
+          <article class="kpi-card">
+            <span class="stat-icon tone-blue"><svg aria-hidden="true"><use href="#i-crosshair"/></svg></span>
+            <div class="kpi-copy">
+              <span>Toplam İmalat</span>
+              <strong id="reportKpiWork">0 <small>m</small></strong>
+              <small class="kpi-sub" id="reportKpiWorkSub">Kayıt yok</small>
+            </div>
+          </article>
+
+          <article class="kpi-card">
+            <span class="stat-icon tone-amber"><svg aria-hidden="true"><use href="#i-excavator"/></svg></span>
+            <div class="kpi-copy">
+              <span>Toplam Kazı</span>
+              <strong id="reportKpiDig">0 <small>m³</small></strong>
+              <small class="kpi-sub" id="reportKpiDigSub">Kazı yok</small>
+            </div>
+          </article>
+
+          <article class="kpi-card">
+            <span class="stat-icon tone-purple"><svg aria-hidden="true"><use href="#i-clipboard"/></svg></span>
+            <div class="kpi-copy">
+              <span>Saha Kayıtları</span>
+              <strong id="reportKpiRecords">0 <small>kayıt</small></strong>
+              <small class="kpi-sub" id="reportKpiRecordsSub">Kayıt yok</small>
+            </div>
+          </article>
+        </div>
+
+        <div class="charts-grid">
+          <article class="chart-card">
+            <div class="chart-head">
+              <h3><svg aria-hidden="true"><use href="#i-trend-up"/></svg>İmalat Trendi</h3>
+              <span class="mini-select" id="reportTrendRange">Son 30 gün</span>
+            </div>
+            <p class="chart-sub" id="reportTrendSub">Toplam 0 m</p>
+            <div id="reportTrendChart"></div>
+          </article>
+
+          <article class="chart-card">
+            <div class="chart-head">
+              <h3><svg aria-hidden="true"><use href="#i-projects"/></svg>Proje İlerlemesi</h3>
+              <span class="mini-select" id="reportProjectRange">Tümü</span>
+            </div>
+            <p class="chart-sub" id="reportProjectSub">Proje bulunmuyor</p>
+            <div class="report-bars" id="reportProjectProgress"></div>
+          </article>
+        </div>
+
+        <div class="report-bottom-grid">
+          <article class="donut-card">
+            <div class="chart-head"><h3><svg aria-hidden="true"><use href="#i-layers"/></svg>Kayıt Türleri</h3></div>
+            <div class="donut-wrap">
+              <div class="donut" id="reportTypeDonut">
+                <span class="donut-center"><strong id="reportTypeTotal">0</strong><small>kayıt</small></span>
+              </div>
+              <ul class="legend" id="reportTypeLegend"></ul>
+            </div>
+          </article>
+
+          <article class="approvals-card">
+            <div class="chart-head"><h3><svg aria-hidden="true"><use href="#i-clock"/></svg>Onay Bekleyenler</h3><span class="mini-select" id="reportPendingCount">0</span></div>
+            <div class="approval-list" id="reportPendingList"></div>
+          </article>
+        </div>
+
+        <article class="reports-list-card">
+          <div class="chart-head">
+            <h3><svg aria-hidden="true"><use href="#i-clipboard"/></svg>Proje Performansı</h3>
+            <span class="mini-select" id="reportProjectCount">0 proje</span>
+          </div>
+          <p class="chart-sub">Dönem içindeki imalat, kazı ve kayıt özeti</p>
+          <div id="reportProjectRows"></div>
+        </article>
+      </div>
     </section>
 
   </main>

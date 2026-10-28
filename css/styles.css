@@ -1352,6 +1352,49 @@ input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; }
 .report-file .icon-btn { width: 26px; height: 26px; border: 0; background: #f4f8fd; color: #557b9e; box-shadow: none; }
 .report-file .icon-btn svg { width: 13px; height: 13px; }
 
+.kpi-copy > small.kpi-sub { font-size: 8.5px; font-weight: 600; color: var(--muted); line-height: 1.3; }
+.report-summary-line {
+  margin: 11px 0 9px;
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.report-bars { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.report-bar-row { min-width: 0; }
+.report-bar-top { display: flex; align-items: center; justify-content: space-between; gap: 5px; margin-bottom: 3px; }
+.report-bar-top strong { min-width: 0; font-size: 9px; font-weight: 700; color: #4d6480; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.report-bar-top span { flex: none; font-size: 8.5px; font-weight: 800; color: var(--blue); }
+.report-bar-row .bar { height: 5px; margin: 0; }
+.report-bars-empty, .report-empty-line { margin: 0; padding: 12px 0; font-size: 9.5px; color: var(--muted); text-align: center; }
+.report-extra-note { margin-top: 7px; font-size: 8.5px; color: var(--muted); }
+.report-project-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 8px;
+  width: 100%;
+  padding: 9px 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  color: inherit;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+}
+.report-project-row:last-child { border-bottom: 0; padding-bottom: 2px; }
+.report-project-row:active { background: #f8fbff; }
+.report-project-title { min-width: 0; font-size: 10px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.report-project-row .badge { font-size: 8px; justify-self: end; }
+.report-project-metrics { grid-column: 1 / -1; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; font-size: 8.5px; color: var(--muted); }
+.report-project-metrics span { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+.report-project-metrics svg { width: 11px; height: 11px; color: #7f94ab; }
+.report-project-metrics b { color: #5f7189; font-size: 8.5px; }
+.report-project-progress { grid-column: 1 / -1; display: flex; align-items: center; gap: 7px; }
+.report-project-progress .bar { flex: 1; height: 4px; margin: 0; }
+.report-project-progress b { font-size: 8.5px; color: #5f7189; }
+.approval-list .report-empty-line { padding: 10px 0 4px; }
+.approval-list .pending-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* ---------------- Bottom nav ---------------- */
 
 .bottom-nav {

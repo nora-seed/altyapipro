@@ -53,6 +53,21 @@
     error: { label: 'Sorun Var', className: 'error' }
   };
 
+  const REPORT_PERIODS = {
+    '7': { days: 7, label: 'Son 7 gün' },
+    '30': { days: 30, label: 'Son 30 gün' },
+    '90': { days: 90, label: 'Son 90 gün' },
+    all: { days: null, label: 'Tüm Zamanlar' }
+  };
+
+  const REPORT_TYPE_COLORS = {
+    work: '#1f6ff0',
+    service: '#17a34a',
+    dig: '#e5a11a',
+    photo: '#8b5cf6',
+    other: '#9aa7b8'
+  };
+
   const BRANCHES = {
     water: { label: 'İçme Suyu', color: '#1f6ff0', icon: 'i-droplet', tone: 'blue' },
     sewer: { label: 'Kanalizasyon', color: '#a9743f', icon: 'i-waves', tone: 'brown' },
@@ -88,6 +103,8 @@
     projectSort: 'default',
     recordType: 'all',
     recordQuery: '',
+    reportProject: 'all',
+    reportPeriod: '30',
     editingId: null,
     formReturnId: null,
     pendingRecordType: null,
@@ -2297,6 +2314,572 @@
     });
   }
 
+  /* ---------------- Raporlar ---------------- */
+
+  function reportPeriodInfo(period) {
+    return REPORT_PERIODS[period] || REPORT_PERIODS['30'];
+  }
+
+  function reportStartDate(period) {
+    const info = reportPeriodInfo(period);
+    if (!info.days) return null;
+    const start = startOfDay(new Date());
+    start.setDate(start.getDate() - (info.days - 1));
+    return start;
+  }
+
+  function activeReportProjects() {
+    const selected = state.projects.find((project) => project.id === state.reportProject);
+    return selected ? [selected] : state.projects;
+  }
+
+  function reportRecordsFor(projects, period) {
+    const ids = new Set(projects.map((project) => project.id));
+    const start = reportStartDate(period);
+    return state.records
+      .filter((record) => ids.has(record.projectId))
+      .filter((record) => !start || new Date(record.createdAt) >= start)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }
+
+  function reportBuckets(period) {
+    const today = new Date();
+
+    if (period === 'all') {
+      return Array.from({ length: 12 }, (_, index) => {
+        const start = new Date(today.getFullYear(), today.getMonth() - (11 - index), 1);
+        const end = new Date(start.getFullYear(), start.getMonth() + 1, 1);
+        return {
+          start,
+          end,
+          label: new Intl.DateTimeFormat('tr-TR', { month: 'short' }).format(start),
+          work: 0,
+          dig: 0,
+          count: 0
+        };
+      });
+    }
+
+    const step = period === '90' ? 7 : period === '30' ? 3 : 1;
+    const count = period === '90' ? 13 : period === '30' ? 10 : 7;
+    const start = startOfDay(today);
+    start.setDate(start.getDate() - (count * step - 1));
+
+    return Array.from({ length: count }, (_, index) => {
+      const bucketStart = new Date(start);
+      bucketStart.setDate(bucketStart.getDate() + index * step);
+      const bucketEnd = new Date(bucketStart);
+      bucketEnd.setDate(bucketEnd.getDate() + step);
+      return {
+        start: bucketStart,
+        end: bucketEnd,
+        label: new Intl.DateTimeFormat('tr-TR', {
+          day: '2-digit',
+          month: 'short'
+        }).format(bucketStart),
+        work: 0,
+        dig: 0,
+        count: 0
+      };
+    });
+  }
+
+  function buildReportData() {
+    const info = reportPeriodInfo(state.reportPeriod);
+    const projects = activeReportProjects();
+    const records = reportRecordsFor(projects, state.reportPeriod);
+    const workRecords = records.filter((record) => record.type === 'work');
+    const digRecords = records.filter((record) => record.type === 'dig');
+    const pending = records.filter((record) => record.status === 'pending');
+    const workMeters = workRecords.reduce((total, record) => total + record.meters, 0);
+    const digVolume = roundVolume(
+      digRecords.reduce((total, record) => total + record.volume, 0)
+    );
+    const completedProjects = projects.filter((project) => project.status === 'completed').length;
+    const averageProgress = projects.length
+      ? Math.round(projects.reduce((total, project) => total + project.progress, 0) / projects.length)
+      : 0;
+
+    const typeCounts = Object.keys(RECORD_TYPES).reduce((counts, type) => {
+      counts[type] = 0;
+      return counts;
+    }, {});
+    records.forEach((record) => {
+      typeCounts[record.type] = (typeCounts[record.type] || 0) + 1;
+    });
+
+    const trend = reportBuckets(state.reportPeriod);
+    records.forEach((record) => {
+      const created = new Date(record.createdAt);
+      const bucket = trend.find((item) => created >= item.start && created < item.end);
+      if (!bucket) return;
+      bucket.count += 1;
+      if (record.type === 'work') bucket.work += record.meters;
+      if (record.type === 'dig') bucket.dig += record.volume;
+    });
+    const trendWork = trend.reduce((total, bucket) => total + bucket.work, 0);
+
+    const projectRows = projects.map((project) => {
+      const projectRecords = records.filter((record) => record.projectId === project.id);
+      return {
+        ...project,
+        reportRecords: projectRecords.length,
+        reportWork: projectRecords
+          .filter((record) => record.type === 'work')
+          .reduce((total, record) => total + record.meters, 0),
+        reportDig: roundVolume(
+          projectRecords
+            .filter((record) => record.type === 'dig')
+            .reduce((total, record) => total + record.volume, 0)
+        )
+      };
+    });
+
+    return {
+      info,
+      projects,
+      records,
+      workRecords,
+      digRecords,
+      pending,
+      workMeters,
+      digVolume,
+      completedProjects,
+      averageProgress,
+      typeCounts,
+      trend,
+      trendWork,
+      trendLabel: state.reportPeriod === 'all' ? 'Son 12 ay' : info.label,
+      projectRows
+    };
+  }
+
+  function renderReportFilters() {
+    const wrap = $('#reportFilters');
+    if (!wrap) return;
+
+    wrap.innerHTML = `
+      <div class="report-filters">
+        <label class="select-wrap">
+          <select id="reportProject" aria-label="Rapor projesi">
+            <option value="all">Tüm Projeler</option>
+            ${state.projects
+              .map(
+                (project) =>
+                  `<option value="${esc(project.id)}">${esc(project.title)}</option>`
+              )
+              .join('')}
+          </select>
+          <span class="select-label" aria-hidden="true">Tüm Projeler</span>
+          <svg aria-hidden="true"><use href="#i-chevron-down"/></svg>
+        </label>
+        <label class="select-wrap">
+          <select id="reportPeriod" aria-label="Rapor dönemi">
+            ${Object.entries(REPORT_PERIODS)
+              .map(([value, info]) => `<option value="${value}">${esc(info.label)}</option>`)
+              .join('')}
+          </select>
+          <span class="select-label" aria-hidden="true">Son 30 gün</span>
+          <svg aria-hidden="true"><use href="#i-chevron-down"/></svg>
+        </label>
+      </div>`;
+
+    const projectSelect = $('#reportProject');
+    const periodSelect = $('#reportPeriod');
+    if (projectSelect) projectSelect.value = state.reportProject;
+    if (periodSelect) periodSelect.value = state.reportPeriod;
+    syncSelectLabels();
+  }
+
+  function renderReportKpis(data) {
+    const setText = (selector, value) => {
+      const el = $(selector);
+      if (el) el.textContent = value;
+    };
+    const setHtml = (selector, value) => {
+      const el = $(selector);
+      if (el) el.innerHTML = value;
+    };
+
+    const donut = $('#reportKpiDonut');
+    if (donut) donut.style.setProperty('--p', String(data.averageProgress));
+    setText('#reportKpiProgress', `%${data.averageProgress}`);
+    setHtml('#reportKpiProjects', `${data.projects.length} <small>proje</small>`);
+    setHtml(
+      '#reportKpiProgressSub',
+      data.projects.length
+        ? `${data.completedProjects} tamamlandı · ${data.projects.length - data.completedProjects} devam eden`
+        : 'Proje yok'
+    );
+    setHtml('#reportKpiWork', `${formatNumber(data.workMeters)} <small>m</small>`);
+    setHtml(
+      '#reportKpiWorkSub',
+      data.workRecords.length ? `${data.workRecords.length} imalat kaydı` : 'Kayıt yok'
+    );
+    setHtml('#reportKpiDig', `${formatVolume(data.digVolume)} <small>m³</small>`);
+    setHtml(
+      '#reportKpiDigSub',
+      data.digRecords.length ? `${data.digRecords.length} kazı kaydı` : 'Kazı yok'
+    );
+    setHtml('#reportKpiRecords', `${data.records.length} <small>kayıt</small>`);
+    setHtml(
+      '#reportKpiRecordsSub',
+      data.pending.length ? `${data.pending.length} onay bekliyor` : 'Onay bekleyen yok'
+    );
+  }
+
+  function trendChartHtml(series) {
+    const width = 180;
+    const height = 86;
+    const left = 4;
+    const right = 4;
+    const top = 8;
+    const bottom = 66;
+    if (!series.length) return '';
+
+    const max = Math.max(1, ...series.map((item) => item.work));
+    const n = series.length;
+    const pointX = (index) =>
+      n === 1 ? width / 2 : left + (index * (width - left - right)) / (n - 1);
+    const pointY = (value) => bottom - (value / max) * (bottom - top);
+    const points = series.map((item, index) => ({
+      x: pointX(index),
+      y: pointY(item.work),
+      item
+    }));
+    const line = points
+      .map((point, index) => `${index ? 'L' : 'M'}${point.x.toFixed(1)} ${point.y.toFixed(1)}`)
+      .join(' ');
+    const area = `${line} L ${points[points.length - 1].x.toFixed(1)} ${bottom} L ${points[0].x.toFixed(1)} ${bottom} Z`;
+    const grid = [0, 0.5, 1]
+      .map((ratio) => {
+        const y = top + ratio * (bottom - top);
+        return `<line x1="${left}" y1="${y}" x2="${width - right}" y2="${y}" stroke="#e8eff8" stroke-width="1"/>`;
+      })
+      .join('');
+    const labelIndexes = new Set([0, Math.floor((n - 1) / 2), n - 1]);
+    const labels = Array.from(labelIndexes)
+      .map((index) => {
+        const anchor = index === 0 ? 'start' : index === n - 1 ? 'end' : 'middle';
+        return `<text x="${pointX(index).toFixed(1)}" y="80" text-anchor="${anchor}" font-size="6" fill="#7c8ea4">${esc(series[index].label)}</text>`;
+      })
+      .join('');
+    const dots = points
+      .map(
+        (point) =>
+          `<circle cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="2.2" fill="#fff" stroke="#1f6ff0" stroke-width="1.4"><title>${esc(point.item.label)}: ${formatNumber(point.item.work)} m</title></circle>`
+      )
+      .join('');
+    const total = series.reduce((sum, item) => sum + item.work, 0);
+
+    return `<svg class="line-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="İmalat trendi, toplam ${formatNumber(total)} metre">
+      ${grid}
+      <path d="${area}" fill="#1f6ff0" opacity="0.1"/>
+      <path d="${line}" fill="none" stroke="#1f6ff0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      ${dots}
+      ${labels}
+    </svg>`;
+  }
+
+  function renderReportTrend(data) {
+    const setText = (selector, value) => {
+      const el = $(selector);
+      if (el) el.textContent = value;
+    };
+    const trendCount = data.trend.reduce((total, bucket) => total + bucket.count, 0);
+    setText('#reportTrendRange', data.trendLabel);
+    setText(
+      '#reportTrendSub',
+      `${formatNumber(data.trendWork)} m imalat · ${trendCount} kayıt`
+    );
+    const chart = $('#reportTrendChart');
+    if (chart) chart.innerHTML = trendChartHtml(data.trend);
+  }
+
+  function renderReportProjectProgress(data) {
+    const setText = (selector, value) => {
+      const el = $(selector);
+      if (el) el.textContent = value;
+    };
+    setText('#reportProjectRange', state.reportProject === 'all' ? 'Tümü' : 'Tek proje');
+    setText(
+      '#reportProjectSub',
+      data.projects.length
+        ? `${data.projects.length} proje · ortalama %${data.averageProgress}`
+        : 'Proje bulunmuyor'
+    );
+
+    const wrap = $('#reportProjectProgress');
+    if (!wrap) return;
+    if (!data.projects.length) {
+      wrap.innerHTML = '<p class="report-bars-empty">Proje bulunmuyor.</p>';
+      return;
+    }
+
+    const visible = data.projects.slice(0, 5);
+    wrap.innerHTML =
+      visible
+        .map(
+          (project) => `
+          <div class="report-bar-row">
+            <div class="report-bar-top">
+              <strong>${esc(project.title)}</strong>
+              <span>%${esc(project.progress)}</span>
+            </div>
+            <span class="bar"><i style="width:${project.progress}%"></i></span>
+          </div>`
+        )
+        .join('') +
+      (data.projects.length > visible.length
+        ? `<p class="report-extra-note">+${data.projects.length - visible.length} proje daha</p>`
+        : '');
+  }
+
+  function renderReportDonut(data) {
+    const total = data.records.length;
+    const entries = Object.keys(RECORD_TYPES)
+      .map((type) => ({ type, count: data.typeCounts[type] || 0 }))
+      .filter((entry) => entry.count > 0);
+    const donut = $('#reportTypeDonut');
+    const totalEl = $('#reportTypeTotal');
+    const legend = $('#reportTypeLegend');
+
+    if (totalEl) totalEl.textContent = String(total);
+    if (donut) {
+      if (!total) {
+        donut.style.background = '#e8eff8';
+      } else {
+        let cursor = 0;
+        const segments = entries.map((entry, index) => {
+          const start = cursor;
+          cursor += (entry.count / total) * 100;
+          const end = index === entries.length - 1 ? 100 : cursor;
+          return `${REPORT_TYPE_COLORS[entry.type]} ${start.toFixed(2)}% ${end.toFixed(2)}%`;
+        });
+        donut.style.background = `conic-gradient(${segments.join(', ')})`;
+      }
+    }
+    if (legend) {
+      legend.innerHTML = entries.length
+        ? entries
+            .map(
+              (entry) =>
+                `<li><i class="dot" style="background:${REPORT_TYPE_COLORS[entry.type]}"></i><span>${esc(recordTypeInfo(entry.type).label)}</span><b>${entry.count}</b></li>`
+            )
+            .join('')
+        : '<li class="report-empty-line">Kayıt yok</li>';
+    }
+  }
+
+  function renderReportPending(data) {
+    const list = $('#reportPendingList');
+    const count = $('#reportPendingCount');
+    if (count) count.textContent = String(data.pending.length);
+    if (!list) return;
+
+    if (!data.pending.length) {
+      list.innerHTML = '<p class="report-empty-line">Onay bekleyen kayıt yok.</p>';
+      return;
+    }
+
+    const visible = data.pending.slice(0, 3);
+    list.innerHTML =
+      visible
+        .map((record) => {
+          const info = recordTypeInfo(record.type);
+          return `<button type="button" data-edit-record="${esc(record.id)}" aria-label="${esc(record.title)} kaydını düzenle">
+            <span class="appr-icon tone-${esc(info.tone)}">${icon(info.icon)}</span>
+            <span class="pending-title">${esc(record.title)}</span>
+            ${icon('i-chevron', 'chev')}
+          </button>`;
+        })
+        .join('') +
+      (data.pending.length > visible.length
+        ? `<p class="report-extra-note">+${data.pending.length - visible.length} kayıt daha</p>`
+        : '');
+  }
+
+  function renderReportProjectRows(data) {
+    const wrap = $('#reportProjectRows');
+    const count = $('#reportProjectCount');
+    if (count) count.textContent = `${data.projectRows.length} proje`;
+    if (!wrap) return;
+
+    if (!data.projectRows.length) {
+      wrap.innerHTML = '<p class="report-empty-line">Proje bulunmuyor.</p>';
+      return;
+    }
+
+    wrap.innerHTML = data.projectRows
+      .map(
+        (project) => `
+        <button type="button" class="report-project-row" data-project-id="${esc(project.id)}" aria-label="${esc(project.title)} proje detayını aç">
+          <span class="report-project-title">${esc(project.title)}</span>
+          <span class="badge ${esc(project.status)}">${esc(project.statusLabel)}</span>
+          <div class="report-project-metrics">
+            <span>${icon('i-records')}<b>${project.reportRecords}</b> kayıt</span>
+            <span>${icon('i-crosshair')}<b>${formatNumber(project.reportWork)}</b> m</span>
+            <span>${icon('i-excavator')}<b>${formatVolume(project.reportDig)}</b> m³</span>
+          </div>
+          <div class="report-project-progress">
+            <span class="bar"><i style="width:${project.progress}%"></i></span>
+            <b>%${esc(project.progress)}</b>
+          </div>
+        </button>`
+      )
+      .join('');
+  }
+
+  function renderReports() {
+    const empty = $('#reportsEmpty');
+    const content = $('#reportsContent');
+    const filters = $('#reportFilters');
+    if (!empty || !content) return;
+
+    if (!REPORT_PERIODS[state.reportPeriod]) state.reportPeriod = '30';
+    if (
+      state.reportProject !== 'all' &&
+      !state.projects.some((project) => project.id === state.reportProject)
+    ) {
+      state.reportProject = 'all';
+    }
+
+    const hasData = state.projects.length > 0 || state.records.length > 0;
+    empty.hidden = hasData;
+    content.hidden = !hasData;
+    if (!hasData) {
+      if (filters) filters.innerHTML = '';
+      return;
+    }
+
+    renderReportFilters();
+    const data = buildReportData();
+    const projectLabel =
+      state.reportProject === 'all'
+        ? 'Tüm Projeler'
+        : state.projects.find((project) => project.id === state.reportProject)?.title || 'Tüm Projeler';
+    const summary = $('#reportSummary');
+    if (summary) {
+      summary.textContent = `${data.info.label} · ${projectLabel} · ${data.records.length} kayıt`;
+    }
+
+    renderReportKpis(data);
+    renderReportTrend(data);
+    renderReportProjectProgress(data);
+    renderReportDonut(data);
+    renderReportPending(data);
+    renderReportProjectRows(data);
+  }
+
+  function formatReportDate(value, withTime = false) {
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return new Intl.DateTimeFormat('tr-TR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      ...(withTime ? { hour: '2-digit', minute: '2-digit' } : {})
+    }).format(date);
+  }
+
+  function csvCell(value) {
+    return `"${String(value == null ? '' : value).replace(/"/g, '""')}"`;
+  }
+
+  function downloadReportCsv() {
+    if (!state.projects.length && !state.records.length) {
+      toast('Dışa aktarılacak rapor verisi yok.');
+      return;
+    }
+
+    const data = buildReportData();
+    const projectLabel =
+      state.reportProject === 'all'
+        ? 'Tüm Projeler'
+        : state.projects.find((project) => project.id === state.reportProject)?.title || 'Tüm Projeler';
+    const projectNames = new Map(state.projects.map((project) => [project.id, project.title]));
+    const rows = [
+      ['AltyapıPro Raporu'],
+      ['Oluşturma', formatReportDate(new Date(), true)],
+      ['Dönem', data.info.label],
+      ['Proje', projectLabel],
+      [],
+      ['Özet'],
+      ['Proje Sayısı', data.projects.length],
+      ['Saha Kaydı', data.records.length],
+      ['Toplam İmalat (m)', data.workMeters],
+      ['Toplam Kazı (m³)', data.digVolume],
+      ['Onay Bekleyen', data.pending.length],
+      [],
+      ['Projeler'],
+      ['Proje', 'İl', 'İlçe', 'Tür', 'Durum', 'İlerleme (%)', 'Kayıt', 'İmalat (m)', 'Kazı (m³)'],
+      ...data.projectRows.map((project) => [
+        project.title,
+        project.province,
+        project.district,
+        project.type,
+        project.statusLabel,
+        project.progress,
+        project.reportRecords,
+        project.reportWork,
+        project.reportDig
+      ]),
+      [],
+      ['Saha Kayıtları'],
+      ['Tarih', 'Proje', 'Tür', 'Başlık', 'Konum', 'Ekip', 'Kişi', 'İmalat (m)', 'Kazı (m³)', 'Durum', 'Not'],
+      ...data.records.map((record) => [
+        formatReportDate(record.createdAt, true),
+        projectNames.get(record.projectId) || 'Proje silinmiş',
+        recordTypeInfo(record.type).label,
+        record.title,
+        record.location,
+        record.team,
+        record.people,
+        record.meters,
+        record.volume,
+        record.statusLabel,
+        record.note
+      ])
+    ];
+    const csv = `\ufeff${rows.map((row) => row.map(csvCell).join(';')).join('\r\n')}`;
+    const filename = `altyapipro-rapor-${new Date().toISOString().slice(0, 10)}.csv`;
+
+    try {
+      const blob = new window.Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const objectUrl =
+        window.URL && typeof window.URL.createObjectURL === 'function'
+          ? window.URL.createObjectURL(blob)
+          : '';
+      link.href = objectUrl || `data:text/csv;charset=utf-8,${encodeURIComponent(csv)}`;
+      link.download = filename;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      if (objectUrl && window.URL && typeof window.URL.revokeObjectURL === 'function') {
+        window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 1000);
+      }
+      toast('Rapor CSV olarak dışa aktarıldı.');
+    } catch (error) {
+      toast('Rapor dışa aktarılamadı.');
+    }
+  }
+
+  const reportFilterWrap = $('#reportFilters');
+  if (reportFilterWrap) {
+    reportFilterWrap.addEventListener('change', (event) => {
+      const select = event.target.closest('select');
+      if (!select) return;
+      if (select.id === 'reportProject') state.reportProject = select.value || 'all';
+      if (select.id === 'reportPeriod') state.reportPeriod = select.value || '30';
+      renderReports();
+    });
+  }
+
+  const reportExportBtn = $('#reportExportBtn');
+  if (reportExportBtn) reportExportBtn.addEventListener('click', downloadReportCsv);
+
   /* ---------------- Harita etkileşimleri ---------------- */
 
   const branchGroup = $('#branchFilters');
@@ -2785,6 +3368,7 @@
     renderMapProjects();
     refreshMapForData();
     renderMapActive(selectedMapProject() || currentFeaturedProject());
+    renderReports();
   }
 
   currentLocation = loadStoredLocation();
