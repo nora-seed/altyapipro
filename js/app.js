@@ -30,6 +30,14 @@
     'Telekom Altyapısı': 'assets/telecom.svg'
   };
 
+  const LOCATIONS = {
+    Kayseri: ['Melikgazi', 'Kocasinan'],
+    Ankara: ['Çankaya', 'Keçiören'],
+    İstanbul: ['Kadıköy', 'Şişli'],
+    İzmir: ['Bornova', 'Karşıyaka'],
+    Antalya: ['Muratpaşa', 'Kepez']
+  };
+
   const RECORD_TYPES = {
     work: { label: 'İmalat', tone: 'blue', icon: 'i-waves', defaultTitle: 'Saha İmalatı' },
     service: { label: 'Abone Bağlantısı', tone: 'green', icon: 'i-users', defaultTitle: 'Abone Bağlantısı' },
@@ -84,11 +92,13 @@
     formReturnId: null,
     pendingRecordType: null,
     recordFormType: 'work',
+    editingRecordId: null,
     pendingPhoto: '',
     sheetFocus: null,
     confirmAction: null,
     confirmReturnProject: null,
     mapBranch: 'all',
+    mapProjectId: 'all',
     mapSatellite: false
   };
 
@@ -591,6 +601,41 @@
 
   /* ---------------- Projeler ---------------- */
 
+  function syncProjectLocationSelects(province = '', district = '') {
+    const provinceSelect = $('#projectProvince');
+    const districtSelect = $('#projectDistrict');
+    if (!provinceSelect || !districtSelect) return;
+
+    const provinces = Object.keys(LOCATIONS);
+    if (province && !provinces.includes(province)) provinces.push(province);
+    provinceSelect.innerHTML = [
+      '<option value="">İl seçin</option>',
+      ...provinces.map((name) => `<option value="${esc(name)}">${esc(name)}</option>`)
+    ].join('');
+    provinceSelect.value = province || '';
+    syncProjectDistrictOptions(district);
+  }
+
+  function syncProjectDistrictOptions(selected = '') {
+    const provinceSelect = $('#projectProvince');
+    const districtSelect = $('#projectDistrict');
+    if (!provinceSelect || !districtSelect) return;
+
+    const province = provinceSelect.value;
+    const districts = province ? [...(LOCATIONS[province] || [])] : [];
+    if (selected && !districts.includes(selected)) districts.push(selected);
+
+    districtSelect.disabled = !province;
+    districtSelect.innerHTML = province
+      ? [
+          '<option value="">İlçe seçin</option>',
+          ...districts.map((name) => `<option value="${esc(name)}">${esc(name)}</option>`)
+        ].join('')
+      : '<option value="">Önce il seçin</option>';
+
+    if (selected && districts.includes(selected)) districtSelect.value = selected;
+  }
+
   function syncProvinceOptions() {
     const select = $('#provinceFilter');
     if (!select) return;
@@ -754,7 +799,7 @@
     wrap.innerHTML = recent
       .map(
         (record) => `
-        <button type="button" class="recent-item" data-project-id="${esc(record.projectId)}">
+        <button type="button" class="recent-item" data-edit-record="${esc(record.id)}" aria-label="${esc(record.title)} kaydını düzenle">
           <span class="record-icon tone-${esc(record.tone)}">${icon(esc(record.icon))}</span>
           <span class="recent-main">
             <span class="recent-top">
@@ -1051,6 +1096,50 @@
     return points;
   }
 
+  function selectedMapProject() {
+    if (state.mapProjectId === 'all') return null;
+    return state.projects.find((project) => project.id === state.mapProjectId) || null;
+  }
+
+  function selectedMapPoints() {
+    const project = selectedMapProject();
+    const points = mappedPoints();
+    return project ? points.filter((point) => point.project.id === project.id) : points;
+  }
+
+  function renderMapProjects() {
+    const wrap = $('#mapProjectFilters');
+    const count = $('#mapProjectCount');
+    if (!wrap) return;
+
+    if (state.mapProjectId !== 'all' && !state.projects.some((project) => project.id === state.mapProjectId)) {
+      state.mapProjectId = 'all';
+    }
+    if (count) count.textContent = `${state.projects.length} proje`;
+
+    if (!state.projects.length) {
+      wrap.innerHTML = '<span class="map-project-empty">Henüz proje yok</span>';
+      return;
+    }
+
+    wrap.innerHTML = [
+      `<button class="chip${state.mapProjectId === 'all' ? ' is-active' : ''}" type="button" data-map-project="all"><i class="dot blue"></i><span>Tümü</span></button>`,
+      ...state.projects.map((project) => {
+        const branch = branchInfo(projectBranch(project));
+        return `<button class="chip${state.mapProjectId === project.id ? ' is-active' : ''}" type="button" data-map-project="${esc(project.id)}" title="${esc(project.title)}"><i class="dot ${branch.tone}"></i><span>${esc(project.title)}</span></button>`;
+      })
+    ].join('');
+  }
+
+  function setMapProject(projectId, { fit = true } = {}) {
+    const exists = state.projects.some((project) => project.id === projectId);
+    state.mapProjectId = projectId !== 'all' && exists ? projectId : 'all';
+    renderMapProjects();
+    renderMapData({ fit });
+    const project = selectedMapProject();
+    renderMapActive(project || currentFeaturedProject());
+  }
+
   function mapPopupHtml(point) {
     const branch = branchInfo(point.branch);
     const project = point.project;
@@ -1076,7 +1165,8 @@
   }
 
   function renderMapNearby() {
-    const points = mappedPoints();
+    const selected = selectedMapProject();
+    const points = selectedMapPoints();
     const counts = { water: 0, sewer: 0, rain: 0, telecom: 0 };
     points.forEach((point) => {
       if (counts[point.branch] != null) counts[point.branch] += 1;
@@ -1095,14 +1185,33 @@
     });
 
     const empty = $('#mapEmpty');
-    if (empty) empty.hidden = points.length > 0 || Boolean(currentLocation);
+    if (empty) {
+      empty.hidden = points.length > 0 || (!selected && Boolean(currentLocation));
+      const title = $('#mapEmptyTitle');
+      const copy = $('#mapEmptyText');
+      const action = $('#mapEmptyAction');
+      if (selected) {
+        if (title) title.textContent = 'Bu projede konum yok';
+        if (copy) copy.textContent = 'Haritada görmek için projeye enlem/boylam ekleyin.';
+        if (action) action.textContent = 'Projeyi Düzenle';
+      } else if (state.projects.length) {
+        if (title) title.textContent = 'Haritada nokta yok';
+        if (copy) copy.textContent = 'Projelere enlem/boylam ekleyin.';
+        if (action) action.textContent = 'Projeleri Gör';
+      } else {
+        if (title) title.textContent = 'Henüz proje yok';
+        if (copy) copy.textContent = 'Haritada görmek için önce proje ekleyin.';
+        if (action) action.textContent = 'Proje Ekle';
+      }
+    }
   }
 
   function fitMapToData() {
     if (!mapInstance) return;
-    const points = mappedPoints();
+    const selected = selectedMapProject();
+    const points = selectedMapPoints();
     const bounds = window.L.latLngBounds(points.map((point) => [point.lat, point.lng]));
-    if (currentLocation) bounds.extend([currentLocation.lat, currentLocation.lng]);
+    if (!selected && currentLocation) bounds.extend([currentLocation.lat, currentLocation.lng]);
     if (bounds.isValid()) {
       mapInstance.fitBounds(bounds.pad(0.24), { maxZoom: 15, animate: true });
     } else {
@@ -1150,7 +1259,7 @@
       searchMarker = null;
     }
 
-    mappedPoints()
+    selectedMapPoints()
       .filter((point) => state.mapBranch === 'all' || point.branch === state.mapBranch)
       .forEach((point) => {
         const branch = branchInfo(point.branch);
@@ -1359,16 +1468,13 @@
     if (!project) return;
     ensureMap();
     if (!mapInstance) return;
-    if (!hasCoordinates(project)) {
+    state.mapBranch = 'all';
+    setMapProject(project.id, { fit: true });
+    renderMapActive(project);
+    if (!selectedMapPoints().length) {
       toast('Bu projede harita konumu yok.');
       return;
     }
-    state.mapBranch = 'all';
-    renderMapData();
-    renderMapActive(project);
-    mapInstance.flyTo([project.lat, project.lng], Math.max(mapInstance.getZoom(), 15), {
-      duration: 0.8
-    });
     const marker = projectMarkers.get(project.id);
     if (marker) window.setTimeout(() => marker.openPopup(), 220);
   }
@@ -1379,7 +1485,7 @@
     ensureMap();
     if (!mapInstance) return;
     state.mapBranch = 'all';
-    renderMapData();
+    setMapProject(project.id, { fit: true });
     renderMapActive(project);
     mapInstance.flyTo([record.lat, record.lng], Math.max(mapInstance.getZoom(), 16), {
       duration: 0.8
@@ -1507,6 +1613,7 @@
     if (sheet.id === 'recordSheet') {
       state.pendingPhoto = '';
       state.pendingRecordType = null;
+      state.editingRecordId = null;
     }
     hideSheet(sheet);
   }
@@ -1574,7 +1681,7 @@
             ? records
                 .map(
                   (record) => `
-                  <div class="detail-record">
+                  <div class="detail-record" role="button" tabindex="0" data-edit-record="${esc(record.id)}" aria-label="${esc(record.title)} kaydını düzenle">
                     ${
                       record.photo
                         ? `<img class="record-photo" src="${esc(record.photo)}" alt="">`
@@ -1636,8 +1743,7 @@
     setValue('#projectName', project ? project.title : '');
     setValue('#projectType', project ? project.type : 'İçme Suyu Hattı');
     setValue('#projectStatus', project ? project.status : 'ongoing');
-    setValue('#projectProvince', project ? project.province : '');
-    setValue('#projectDistrict', project ? project.district : '');
+    syncProjectLocationSelects(project ? project.province : '', project ? project.district : '');
     setValue(
       '#projectContractor',
       project ? (project.contractor === 'Belirtilmedi' ? '' : project.contractor) : ''
@@ -1712,6 +1818,12 @@
     }
 
     const district = value('#projectDistrict');
+    if (!district) {
+      showProjectFormError('İlçe seçin.');
+      $('#projectDistrict')?.focus();
+      return;
+    }
+
     const type = value('#projectType') || 'İçme Suyu Hattı';
     const status = value('#projectStatus') || 'ongoing';
     const info = statusInfo(status);
@@ -1854,24 +1966,31 @@
     }
     state.recordFormType = type;
     const formTitle = $('#recordFormTitle');
-    if (formTitle) formTitle.textContent = `${info.label} Ekle`;
+    if (formTitle) {
+      formTitle.textContent = `${info.label} ${state.editingRecordId ? 'Güncelle' : 'Ekle'}`;
+    }
     toggleDigFields(type);
   }
 
-  function openRecordForm(type = 'work', projectId = null) {
+  function openRecordForm(type = 'work', projectId = null, editingRecord = null) {
     if (!state.projects.length) {
       state.pendingRecordType = type;
+      state.editingRecordId = null;
       openProjectForm();
       toast('Önce bir proje ekleyin.');
       return;
     }
 
-    const info = recordTypeInfo(type);
+    const record = editingRecord || null;
+    state.editingRecordId = record ? record.id : null;
+    const formType = record && RECORD_TYPES[record.type] ? record.type : type;
+    const info = recordTypeInfo(formType);
     const project =
-      state.projects.find((item) => item.id === projectId) || currentFeaturedProject();
+      state.projects.find((item) => item.id === (record ? record.projectId : projectId)) ||
+      currentFeaturedProject();
     const typeSelect = $('#recordType');
     const projectSelect = $('#recordProject');
-    if (typeSelect) typeSelect.value = type;
+    if (typeSelect) typeSelect.value = formType;
     populateRecordProjects(project ? project.id : state.projects[0].id);
 
     const setValue = (selector, value) => {
@@ -1879,41 +1998,69 @@
       if (el) el.value = value == null ? '' : value;
     };
 
-    setValue('#recordTitle', info.defaultTitle);
-    setValue('#recordLocation', project && project.location !== 'Konum belirtilmedi' ? project.location : '');
-    setValue('#recordLat', project && hasCoordinates(project) ? project.lat : '');
-    setValue('#recordLng', project && hasCoordinates(project) ? project.lng : '');
-    populateTeamOptions();
-    setValue('#recordTeam', '');
-    setValue('#recordPeople', '1');
-    setValue('#recordMeters', '');
-    setValue('#recordWidth', '');
-    setValue('#recordDepth', '');
-    setValue('#recordLength', '');
-    setValue('#recordBucket', '');
-    setValue('#recordMachine', '');
-    setValue('#recordStatus', type === 'photo' ? 'pending' : 'completed');
-    setValue('#recordNote', '');
+    setValue('#recordTitle', record ? record.title : info.defaultTitle);
+    setValue(
+      '#recordLocation',
+      record
+        ? record.location
+        : project && project.location !== 'Konum belirtilmedi'
+          ? project.location
+          : ''
+    );
+    setValue(
+      '#recordLat',
+      record && hasCoordinates(record) ? record.lat : project && hasCoordinates(project) ? project.lat : ''
+    );
+    setValue(
+      '#recordLng',
+      record && hasCoordinates(record) ? record.lng : project && hasCoordinates(project) ? project.lng : ''
+    );
+    populateTeamOptions(record ? record.team : '');
+    setValue('#recordTeam', record ? record.team : '');
+    setValue('#recordPeople', record ? record.people || 1 : '1');
+    setValue('#recordMeters', record ? record.meters : '');
+    setValue('#recordWidth', record ? record.width : '');
+    setValue('#recordDepth', record ? record.depth : '');
+    setValue('#recordLength', record ? record.length : '');
+    setValue('#recordBucket', record ? record.bucket : '');
+    setValue('#recordMachine', record ? record.machine : '');
+    setValue(
+      '#recordStatus',
+      record ? record.status : formType === 'photo' ? 'pending' : 'completed'
+    );
+    setValue('#recordNote', record ? record.note : '');
     setValue('#recordPhoto', '');
-    state.pendingPhoto = '';
-    state.recordFormType = type;
-    toggleDigFields(type);
+    state.pendingPhoto = record ? record.photo : '';
+    state.recordFormType = formType;
+    toggleDigFields(formType);
 
     const preview = $('#recordPhotoPreview');
     const previewImage = $('#recordPhotoImg');
-    if (preview) preview.hidden = true;
-    if (previewImage) previewImage.removeAttribute('src');
+    if (preview) preview.hidden = !state.pendingPhoto;
+    if (previewImage) {
+      if (state.pendingPhoto) previewImage.src = state.pendingPhoto;
+      else previewImage.removeAttribute('src');
+    }
 
     const error = $('#recordFormError');
     if (error) error.hidden = true;
 
     const title = $('#recordFormTitle');
     const submit = $('#recordFormSubmit');
-    if (title) title.textContent = `${info.label} Ekle`;
-    if (submit) submit.textContent = 'Kaydı Ekle';
+    if (title) title.textContent = `${info.label} ${record ? 'Güncelle' : 'Ekle'}`;
+    if (submit) submit.textContent = record ? 'Değişiklikleri Kaydet' : 'Kaydı Ekle';
 
     if (projectSelect) projectSelect.disabled = false;
     showSheet($('#recordSheet'));
+  }
+
+  function openRecordEdit(recordId) {
+    const record = state.records.find((item) => item.id === recordId);
+    if (!record) {
+      toast('Kayıt bulunamadı.');
+      return;
+    }
+    openRecordForm(record.type, record.projectId, record);
   }
 
   function showRecordFormError(message) {
@@ -1984,10 +2131,13 @@
     }
 
     const volume = type === 'dig' ? roundVolume(width * depth * length) : 0;
+    const editing = state.editingRecordId
+      ? state.records.find((item) => item.id === state.editingRecordId)
+      : null;
 
     const record = normalizeRecord(
       {
-        id: `record-${Date.now()}`,
+        id: editing ? editing.id : `record-${Date.now()}`,
         projectId: project.id,
         type,
         title,
@@ -2004,14 +2154,16 @@
         status,
         note: value('#recordNote'),
         photo: state.pendingPhoto,
-        createdAt: new Date().toISOString(),
+        createdAt: editing ? editing.createdAt : new Date().toISOString(),
         lat: coordinates.lat,
         lng: coordinates.lng
       },
       state.records.length
     );
 
-    state.records = [record, ...state.records];
+    state.records = editing
+      ? state.records.map((item) => (item.id === record.id ? record : item))
+      : [record, ...state.records];
     if (applyAutoProgress()) saveProjects();
     let persisted = saveRecords();
     let photoDropped = false;
@@ -2029,13 +2181,13 @@
     markLocalChange();
 
     if (!persisted) {
-      toast('Kayıt eklendi ancak cihazda yeterli kayıt alanı yok.');
+      toast(`Kayıt ${editing ? 'güncellendi' : 'eklendi'} ancak cihazda yeterli kayıt alanı yok.`);
     } else if (photoDropped) {
-      toast('Kayıt eklendi; fotoğraf yer kalmadığı için kaydedilmedi.');
+      toast(`Kayıt ${editing ? 'güncellendi' : 'eklendi'}; fotoğraf yer kalmadığı için kaydedilmedi.`);
     } else if (type === 'dig') {
-      toast(`Kazı kaydı eklendi: ${formatVolume(record.volume)} m³.`);
+      toast(`Kazı kaydı ${editing ? 'güncellendi' : 'eklendi'}: ${formatVolume(record.volume)} m³.`);
     } else {
-      toast('Saha kaydı eklendi.');
+      toast(`Saha kaydı ${editing ? 'güncellendi' : 'eklendi'}.`);
     }
   }
 
@@ -2043,7 +2195,7 @@
 
   function recordCard(record, project) {
     return `
-      <button type="button" class="record" data-project-id="${esc(record.projectId)}">
+      <button type="button" class="record" data-edit-record="${esc(record.id)}" aria-label="${esc(record.title)} kaydını düzenle">
         ${
           record.photo
             ? `<img class="record-photo" src="${esc(record.photo)}" alt="">`
@@ -2153,6 +2305,15 @@
       const chip = event.target.closest('.chip');
       if (!chip) return;
       setMapBranch(chip.dataset.branch || 'all');
+    });
+  }
+
+  const mapProjectGroup = $('#mapProjectFilters');
+  if (mapProjectGroup) {
+    mapProjectGroup.addEventListener('click', (event) => {
+      const chip = event.target.closest('[data-map-project]');
+      if (!chip) return;
+      setMapProject(chip.dataset.mapProject || 'all');
     });
   }
 
@@ -2328,7 +2489,13 @@
     const emptyMap = event.target.closest('[data-empty-map-project]');
     if (emptyMap) {
       event.preventDefault();
-      openProjectForm();
+      if (state.mapProjectId !== 'all') {
+        openProjectForm(state.mapProjectId);
+      } else if (!state.projects.length) {
+        openProjectForm();
+      } else {
+        window.location.hash = '#projects';
+      }
       return;
     }
 
@@ -2340,6 +2507,13 @@
       if (window.location.hash === '#map') setScreen('map');
       else window.location.hash = '#map';
       window.setTimeout(() => focusProjectOnMap(projectId), 140);
+      return;
+    }
+
+    const editRecord = event.target.closest('[data-edit-record]');
+    if (editRecord) {
+      event.preventDefault();
+      openRecordEdit(editRecord.dataset.editRecord);
       return;
     }
 
@@ -2373,6 +2547,13 @@
       openProjectForm();
       return;
     }
+    const editRecord = event.target.closest('[data-edit-record]');
+    if (editRecord && editRecord.tagName !== 'BUTTON' && editRecord.tagName !== 'A') {
+      event.preventDefault();
+      openRecordEdit(editRecord.dataset.editRecord);
+      return;
+    }
+
     const trigger = event.target.closest('[data-project-id]');
     if (!trigger || trigger.tagName === 'BUTTON' || trigger.tagName === 'A') return;
     if (trigger.dataset.projectId) {
@@ -2464,6 +2645,15 @@
     progressInput.addEventListener('input', () => {
       const value = $('#projectProgressValue');
       if (value) value.textContent = progressInput.value;
+    });
+  }
+
+  const projectProvince = $('#projectProvince');
+  if (projectProvince) {
+    projectProvince.addEventListener('change', () => {
+      syncProjectDistrictOptions();
+      const error = $('#projectFormError');
+      if (error) error.hidden = true;
     });
   }
 
@@ -2592,7 +2782,9 @@
     renderHome();
     renderProjects();
     syncSelectLabels();
+    renderMapProjects();
     refreshMapForData();
+    renderMapActive(selectedMapProject() || currentFeaturedProject());
   }
 
   currentLocation = loadStoredLocation();

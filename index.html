@@ -311,6 +311,11 @@
         </button>
       </div>
 
+      <div class="map-project-bar">
+        <div class="map-project-head"><span>Projeler</span><small id="mapProjectCount">0 proje</small></div>
+        <div class="chips scroll-x" id="mapProjectFilters" aria-label="Proje seç"></div>
+      </div>
+
       <div class="chips scroll-x map-chips" id="branchFilters" aria-label="Altyapı türü">
         <button class="chip is-active" type="button" data-branch="all"><i class="dot blue"></i>Tümü</button>
         <button class="chip" type="button" data-branch="water"><i class="dot blue"></i>İçme Suyu</button>
@@ -323,9 +328,9 @@
         <div class="leaflet-map" id="mapCanvas" aria-label="Saha haritası"></div>
         <div class="map-empty" id="mapEmpty" hidden>
           <span class="map-empty-icon"><svg aria-hidden="true"><use href="#i-map"/></svg></span>
-          <strong>Haritada nokta yok</strong>
-          <p>Proje veya saha kaydına enlem/boylam ekleyin.</p>
-          <button class="btn btn-primary btn-sm" type="button" data-empty-map-project>Proje Ekle</button>
+          <strong id="mapEmptyTitle">Henüz proje yok</strong>
+          <p id="mapEmptyText">Haritada görmek için önce proje ekleyin.</p>
+          <button class="btn btn-primary btn-sm" type="button" data-empty-map-project id="mapEmptyAction">Proje Ekle</button>
         </div>
 
         <div class="map-tools">
@@ -338,7 +343,6 @@
           <button class="map-tool" type="button" id="mapFitToolBtn" aria-label="Tüm noktaları göster">
             <svg aria-hidden="true"><use href="#i-compass"/></svg>
           </button>
-          <button class="map-tool text" type="button" data-soon aria-label="3B görünüm">3D</button>
         </div>
 
         <button class="satellite-chip" type="button" id="mapSatelliteBtn" aria-pressed="false">
@@ -521,11 +525,15 @@
         </label>
         <label class="field">
           <span>İl</span>
-          <input class="field-input" id="projectProvince" name="province" type="text" placeholder="İl" autocomplete="off">
+          <select class="field-input" id="projectProvince" name="province">
+            <option value="">İl seçin</option>
+          </select>
         </label>
         <label class="field">
           <span>İlçe</span>
-          <input class="field-input" id="projectDistrict" name="district" type="text" placeholder="İlçe" autocomplete="off">
+          <select class="field-input" id="projectDistrict" name="district" disabled>
+            <option value="">Önce il seçin</option>
+          </select>
         </label>
         <label class="field field-full">
           <span>Yüklenici</span>

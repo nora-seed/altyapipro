@@ -1,5 +1,5 @@
 /* AltyapıPro service worker — çevrimdışı kabuk */
-const CACHE = 'altyapipro-v6';
+const CACHE = 'altyapipro-v7';
 const TILE_CACHE = 'altyapipro-tiles-v1';
 const TILE_HOSTS = ['tile.openstreetmap.org', 'server.arcgisonline.com'];
 const SHELL = [
